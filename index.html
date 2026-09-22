@@ -160,6 +160,14 @@
     color: var(--color-text);
   }
 
+  .viewport-hint {
+    font-size: 0.76rem;
+    color: var(--color-text-dim);
+    padding: 8px 24px;
+    background: var(--color-panel-alt);
+    border-bottom: 1px solid var(--color-border);
+  }
+
   /* ---------- Layout ---------- */
   main.layout {
     display: grid;
@@ -405,6 +413,7 @@
   </select>
   <button class="reset" id="filterReset" type="button">Reset filtrů</button>
 </div>
+<div class="viewport-hint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
 
 <main class="layout">
   <div id="map"></div>
@@ -428,9 +437,12 @@
   // ------------------------------------------------------------
   // State
   // ------------------------------------------------------------
-  let allProperties = [];   // raw data from Supabase
+  let allProperties = [];   // properties currently loaded for the visible map viewport
   let activeId = null;      // currently selected property id
+  let districtsSeen = new Set(); // district names seen so far, to build the filter dropdown incrementally
+  let fetchInFlight = false;
   const markersById = new Map();
+  let markersLayer;         // set once the map is initialized below
 
   // ------------------------------------------------------------
   // Supabase client
@@ -449,6 +461,8 @@
     subdomains: "abcd",
     maxZoom: 19,
   }).addTo(map);
+
+  markersLayer = L.layerGroup().addTo(map);
 
   // ------------------------------------------------------------
   // Helpers
@@ -475,51 +489,79 @@
   }
 
   // ------------------------------------------------------------
-  // Fetch data from Supabase
+  // Fetch data from Supabase — bounding-box RPC (properties_in_bbox)
+  //
+  // Instead of pulling the whole table, we ask Postgres/PostGIS for
+  // only the listings whose location falls inside the map's current
+  // viewport. This re-runs every time the map stops moving, so the
+  // amount of data fetched scales with what's on screen, not with the
+  // total size of the dataset.
   // ------------------------------------------------------------
-  async function loadProperties() {
+  async function loadPropertiesInView() {
+    if (fetchInFlight) return;
+    fetchInFlight = true;
+
     const container = document.getElementById("cardsContainer");
+    const bounds = map.getBounds();
+
     try {
-      const { data, error } = await sb
-        .from("properties")
-        .select("*")
-        .order("created_at", { ascending: true });
+      const { data, error } = await sb.rpc("properties_in_bbox", {
+        min_lng: bounds.getWest(),
+        min_lat: bounds.getSouth(),
+        max_lng: bounds.getEast(),
+        max_lat: bounds.getNorth(),
+      });
 
       if (error) throw error;
-      if (!data || data.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">Zatím žádné nabídky. Zkontrolujte, že jste spustili schema.sql v Supabase.</div>';
-        return;
-      }
 
-      allProperties = data;
-      populateDistrictFilter(data);
-      renderMarkers(data);
+      allProperties = data || [];
+      populateDistrictFilter(allProperties);
+      renderMarkers(allProperties);
       applyFiltersAndRender();
+
+      if (allProperties.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state">V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.</div>';
+        document.getElementById("resultCount").textContent = "";
+      }
     } catch (err) {
       console.error("Supabase fetch failed:", err);
       container.innerHTML =
-        '<div class="error-state">Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js.<br><small>' +
+        '<div class="error-state">Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql (RPC properties_in_bbox).<br><small>' +
         escapeHtml(err.message || String(err)) +
         "</small></div>";
+    } finally {
+      fetchInFlight = false;
     }
   }
 
   function populateDistrictFilter(data) {
     const select = document.getElementById("filterDistrict");
-    const districts = [...new Set(data.map((p) => p.district))].sort();
-    districts.forEach((d) => {
+    const currentValue = select.value;
+    const newDistricts = data.map((p) => p.district).filter((d) => !districtsSeen.has(d));
+
+    if (newDistricts.length === 0) return;
+
+    newDistricts.forEach((d) => districtsSeen.add(d));
+
+    const sorted = [...districtsSeen].sort();
+    select.innerHTML = '<option value="">Všechny čtvrti</option>';
+    sorted.forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d;
       opt.textContent = d;
       select.appendChild(opt);
     });
+    select.value = currentValue;
   }
 
   // ------------------------------------------------------------
-  // Map markers
+  // Map markers — rebuilt on every viewport fetch
   // ------------------------------------------------------------
   function renderMarkers(data) {
+    markersLayer.clearLayers();
+    markersById.clear();
+
     data.forEach((property) => {
       const cls = dealClass(property.deal_rating);
       const icon = L.divIcon({
@@ -528,7 +570,7 @@
         iconSize: null,
       });
 
-      const marker = L.marker([property.lat, property.lng], { icon }).addTo(map);
+      const marker = L.marker([property.lat, property.lng], { icon }).addTo(markersLayer);
       marker.bindPopup(
         `<div class="popup-title">${escapeHtml(property.title)}</div>` +
           `<div class="popup-price">${formatCzk(property.price)} · ${property.area_sqm} m²</div>`
@@ -710,9 +752,14 @@
   });
 
   // ------------------------------------------------------------
+  // Re-fetch whenever the visible map viewport changes
+  // ------------------------------------------------------------
+  map.on("moveend", loadPropertiesInView);
+
+  // ------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------
-  loadProperties();
+  loadPropertiesInView();
 })();
 </script>
 </body>

@@ -8,12 +8,17 @@
 -- ============================================================
 
 -- --------------------------------------------------------------
--- 1. Clean slate (safe to re-run during development)
+-- 1. Extensions
+-- --------------------------------------------------------------
+create extension if not exists postgis;
+
+-- --------------------------------------------------------------
+-- 2. Clean slate (safe to re-run during development)
 -- --------------------------------------------------------------
 drop table if exists public.properties;
 
 -- --------------------------------------------------------------
--- 2. Table definition
+-- 3. Table definition
 -- --------------------------------------------------------------
 create table public.properties (
     id              bigint generated always as identity primary key,
@@ -26,6 +31,11 @@ create table public.properties (
     price_per_sqm   numeric(10, 0) generated always as (round(price / area_sqm)) stored,
     lat             double precision not null,
     lng             double precision not null,
+    -- geog is derived automatically from lat/lng and powers the
+    -- PostGIS bounding-box query used by the map (see properties_in_bbox
+    -- below), so it can never drift out of sync with lat/lng either.
+    geog            geography(Point, 4326) generated always as
+                        (ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography) stored,
     deal_rating     text not null,
     ai_summary      text not null,
     created_at      timestamptz not null default now()
@@ -37,6 +47,8 @@ comment on column public.properties.price is
     'Asking price in CZK.';
 comment on column public.properties.price_per_sqm is
     'Generated column: price / area_sqm, rounded to the nearest CZK.';
+comment on column public.properties.geog is
+    'Generated column: geography point derived from lat/lng, used for the PostGIS bounding-box index/query.';
 comment on column public.properties.deal_rating is
     'Human-readable AI verdict vs. district average, e.g. "Pod tržní cenou (-8 %)".';
 comment on column public.properties.ai_summary is
@@ -45,8 +57,11 @@ comment on column public.properties.ai_summary is
 -- Helpful index for the district filter used by the frontend
 create index properties_district_idx on public.properties (district);
 
+-- Spatial index powering the bounding-box query below
+create index properties_geog_idx on public.properties using gist (geog);
+
 -- --------------------------------------------------------------
--- 3. Row Level Security
+-- 4. Row Level Security
 --
 -- The frontend talks to Supabase using the public "anon" key, so we
 -- must explicitly allow read-only access. No INSERT/UPDATE/DELETE
@@ -59,7 +74,37 @@ create policy "Allow public read" on public.properties
     using (true);
 
 -- --------------------------------------------------------------
--- 4. Seed data — 10 realistic Prague listings
+-- 5. Bounding-box query (RPC)
+--
+-- The frontend calls this instead of "select *" every time the map
+-- viewport changes (Leaflet's "moveend" event), so only listings
+-- actually visible on screen are ever fetched. The "&&" operator uses
+-- the GIST index above for a fast, index-only bounding-box filter
+-- rather than scanning every row.
+-- --------------------------------------------------------------
+create or replace function public.properties_in_bbox(
+    min_lng double precision,
+    min_lat double precision,
+    max_lng double precision,
+    max_lat double precision
+)
+returns setof public.properties
+language sql
+stable
+as $$
+    select *
+    from public.properties
+    where geog && ST_MakeEnvelope(min_lng, min_lat, max_lng, max_lat, 4326)::geography
+$$;
+
+grant execute on function public.properties_in_bbox(double precision, double precision, double precision, double precision)
+    to anon, authenticated;
+
+comment on function public.properties_in_bbox is
+    'Returns listings whose location falls within the given lng/lat bounding box, using the GIST spatial index.';
+
+-- --------------------------------------------------------------
+-- 6. Seed data — 10 realistic Prague listings
 --    (Karlín, Vinohrady, Žižkov, Smíchov)
 --
 -- Coordinates point at real streets in each district.
@@ -164,8 +209,11 @@ values
 );
 
 -- --------------------------------------------------------------
--- 5. Quick sanity check (optional — run separately if you like)
+-- 7. Quick sanity checks (optional — run separately if you like)
 -- --------------------------------------------------------------
 -- select title, district, price, area_sqm, price_per_sqm, deal_rating
 -- from public.properties
 -- order by district, price;
+
+-- Example bounding-box query covering roughly all of central Prague:
+-- select title, district from public.properties_in_bbox(14.35, 50.03, 14.55, 50.13);
