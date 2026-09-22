@@ -332,6 +332,20 @@
   .popup-title { font-weight: 700; margin: 0 0 4px; font-size: 0.9rem; }
   .popup-price { font-size: 0.85rem; color: var(--color-text-dim); }
 
+  /* ---------- Leaflet basemap switcher ---------- */
+  .leaflet-control-layers {
+    background: var(--color-panel);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+  .leaflet-control-layers-list label {
+    font-size: 0.82rem;
+    padding: 2px 4px;
+  }
+  .leaflet-control-layers-selector { margin-right: 6px; }
+
   /* ---------- Footer ---------- */
   footer.app-footer {
     text-align: center;
@@ -455,22 +469,54 @@
   const PRAGUE_KARLIN = [50.0955, 14.4487];
   const map = L.map("map", { zoomControl: true }).setView(PRAGUE_KARLIN, 13);
 
-  // Esri "Dark Gray Canvas" — free, no API key required, matches the dark UI.
-  // Split into a base layer (background) and a reference layer (street/place
-  // labels), stacked so labels render above the canvas but below markers.
-  L.tileLayer(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    {
-      attribution:
-        "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community",
-      maxZoom: 16,
-    }
-  ).addTo(map);
+  // Two free, no-API-key basemaps the user can switch between.
+  const colorLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: "abc",
+    maxZoom: 19,
+  });
 
-  L.tileLayer(
-    "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
-    { maxZoom: 16 }
-  ).addTo(map);
+  // Esri "Dark Gray Canvas" — split into a base layer (background) and a
+  // reference layer (street/place labels) grouped as one selectable theme.
+  const darkLayer = L.layerGroup([
+    L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution:
+          "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community",
+        maxZoom: 16,
+      }
+    ),
+    L.tileLayer(
+      "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 16 }
+    ),
+  ]);
+
+  let savedTheme = "color";
+  try {
+    savedTheme = localStorage.getItem("proptech_map_theme") || "color";
+  } catch (e) {
+    /* localStorage unavailable (private mode etc.) — fall back to default */
+  }
+  (savedTheme === "dark" ? darkLayer : colorLayer).addTo(map);
+
+  L.control
+    .layers(
+      { "🎨 Barevná": colorLayer, "🌙 Tmavá": darkLayer },
+      null,
+      { position: "topright", collapsed: false }
+    )
+    .addTo(map);
+
+  map.on("baselayerchange", (e) => {
+    const theme = e.name.includes("Tmavá") ? "dark" : "color";
+    try {
+      localStorage.setItem("proptech_map_theme", theme);
+    } catch (e2) {
+      /* ignore — theme just won't persist across reloads */
+    }
+  });
 
   markersLayer = L.layerGroup().addTo(map);
 
