@@ -528,6 +528,43 @@
     white-space: nowrap;
   }
 
+  .card-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .copy-link-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-dim);
+    font-size: 0.72rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .copy-link-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .copy-link-btn.copied {
+    border-color: var(--color-good);
+    color: var(--color-good);
+    width: auto;
+    padding: 0 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
   .card-price-row {
     display: flex;
     align-items: baseline;
@@ -900,6 +937,9 @@
       marketStatText: "Oficiální průměr ČSÚ/ČÚZK — byty Praha ({year}): {value} {currency}/m² {trend}",
       marketStatYoy: "r/r",
       marketStatSource: "zdroj: ČSÚ",
+      copyLinkAria: "Kopírovat odkaz na tuto nabídku",
+      copyLinkDone: "✓ Zkopírováno",
+      copyLinkFallback: "Zkopírujte odkaz na tuto nabídku:",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
       errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
@@ -942,6 +982,9 @@
       marketStatText: "Official CZSO/ČÚZK average — Prague apartments ({year}): {value} {currency}/m² {trend}",
       marketStatYoy: "YoY",
       marketStatSource: "source: CZSO",
+      copyLinkAria: "Copy link to this listing",
+      copyLinkDone: "✓ Copied",
+      copyLinkFallback: "Copy this link to the listing:",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
       errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
@@ -1423,7 +1466,10 @@
           <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(title)}" style="animation-delay: ${delay}s">
             <div class="card-top">
               <h3 class="card-title">${escapeHtml(title)}</h3>
-              <span class="district-badge">${escapeHtml(p.district)}</span>
+              <div class="card-top-actions">
+                <span class="district-badge">${escapeHtml(p.district)}</span>
+                <button type="button" class="copy-link-btn" data-copy-id="${p.id}" aria-label="${escapeHtml(t("copyLinkAria"))}" title="${escapeHtml(t("copyLinkAria"))}">🔗</button>
+              </div>
             </div>
             <div class="card-price-row">
               <span class="card-price">${formatCzk(p.price)}</span>
@@ -1448,6 +1494,13 @@
           e.preventDefault();
           selectProperty(id, { flyTo: true });
         }
+      });
+    });
+
+    container.querySelectorAll(".copy-link-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        copyPermalink(Number(btn.dataset.copyId), btn);
       });
     });
   }
@@ -1477,6 +1530,66 @@
 
     const cardEl = document.querySelector(`.card[data-id="${id}"]`);
     if (cardEl) cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    updateUrlForSelection(id);
+  }
+
+  // ------------------------------------------------------------
+  // Permalinks — keeps ?id=<propertyId> in the URL in sync with the
+  // currently selected card, so any view is a shareable/bookmarkable
+  // link. replaceState (not pushState) so clicking around the map
+  // doesn't spam the browser's back button history.
+  // ------------------------------------------------------------
+  function permalinkFor(id) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", id);
+    return url.toString();
+  }
+
+  function updateUrlForSelection(id) {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("id", id);
+      history.replaceState(null, "", url.toString());
+    } catch (e) {
+      /* ignore — URL just won't reflect the selection */
+    }
+  }
+
+  async function copyPermalink(id, button) {
+    const link = permalinkFor(id);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch (e) {
+      window.prompt(t("copyLinkFallback"), link);
+      return;
+    }
+    const original = button.textContent;
+    button.textContent = t("copyLinkDone");
+    button.classList.add("copied");
+    setTimeout(() => {
+      button.textContent = original;
+      button.classList.remove("copied");
+    }, 1500);
+  }
+
+  // If the page was opened with ?id=<propertyId>, recenter the map on
+  // that listing *before* the viewport fetch below runs, so it's
+  // guaranteed to be included in that first bounding-box query.
+  let pendingDeepLinkId = null;
+  async function applyDeepLinkFromUrl() {
+    const idParam = new URLSearchParams(window.location.search).get("id");
+    const id = Number(idParam);
+    if (!idParam || !Number.isFinite(id)) return;
+
+    try {
+      const { data, error } = await sb.from("properties").select("lat, lng").eq("id", id).single();
+      if (error || !data) return; // stale/invalid id in the URL — fall back to the default view
+      map.setView([data.lat, data.lng], 15);
+      pendingDeepLinkId = id;
+    } catch (err) {
+      console.warn("Deep link lookup failed:", err);
+    }
   }
 
   // ------------------------------------------------------------
@@ -1535,10 +1648,9 @@
     applyFiltersAndRender();
   });
 
-  // ------------------------------------------------------------
-  // Re-fetch whenever the visible map viewport changes
-  // ------------------------------------------------------------
-  map.on("moveend", loadPropertiesInView);
+  // Re-fetch whenever the visible map viewport changes. Registered
+  // during boot (below), after the initial deep-link-aware load — see
+  // the comment there for why.
 
   // ------------------------------------------------------------
   // Settings panel — theme (dark/light) and language (cs/en).
@@ -1638,8 +1750,28 @@
 
   // ------------------------------------------------------------
   // Boot
+  //
+  // Order matters here: applyDeepLinkFromUrl() may call map.setView(),
+  // which itself fires "moveend" — so the moveend -> loadPropertiesInView
+  // listener is only attached *after* this first load finishes. Attaching
+  // it earlier would let that setView trigger a second, racing fetch
+  // that finishes before (or instead of) this awaited one, leaving
+  // allProperties not yet populated when we go looking for the deep-
+  // linked id in it right below.
   // ------------------------------------------------------------
-  loadPropertiesInView();
+  async function boot() {
+    await applyDeepLinkFromUrl();
+    await loadPropertiesInView();
+    map.on("moveend", loadPropertiesInView);
+
+    if (pendingDeepLinkId !== null) {
+      if (allProperties.some((p) => p.id === pendingDeepLinkId)) {
+        selectProperty(pendingDeepLinkId, { flyTo: false });
+      }
+      pendingDeepLinkId = null;
+    }
+  }
+  boot();
   loadMarketStat();
 })();
 </script>
