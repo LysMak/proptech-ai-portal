@@ -972,6 +972,30 @@
     mapLayersControl = L.control
       .layers(labels, null, { position: "topleft", collapsed: isNarrow })
       .addTo(map);
+
+    // Stock Leaflet only opens this control on tap (its built-in
+    // handler always expands, never toggles) and closes it on a tap
+    // on the *map*, not on the icon again — tapping the icon a second
+    // time to close it does nothing by default. Add that as a real
+    // toggle: if it's already expanded, tapping the icon collapses it
+    // and (via stopImmediatePropagation, in the capture phase so we
+    // run before Leaflet's own listener) prevents Leaflet from
+    // immediately re-expanding it right after.
+    const toggleLink = mapLayersControl.getContainer().querySelector(".leaflet-control-layers-toggle");
+    if (toggleLink) {
+      toggleLink.addEventListener(
+        "click",
+        (e) => {
+          const expanded = mapLayersControl._container.classList.contains("leaflet-control-layers-expanded");
+          if (expanded) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            mapLayersControl._collapse();
+          }
+        },
+        true
+      );
+    }
   }
   // Created for real inside applyTranslations() near the bottom of this
   // script, once the i18n dictionary and helper functions it needs exist.
