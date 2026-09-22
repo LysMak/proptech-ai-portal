@@ -90,6 +90,9 @@ Each listing stores `lat`/`lng` as `double precision`, plus a `geog geography(Po
 **AI-assisted valuation, pre-computed by design.**
 Rather than calling a paid LLM API on every page load (which would break the 0 CZK budget and add latency), each listing's `deal_rating` and `ai_summary` were generated once, offline, with Claude 3.5 Sonnet acting as a market analyst over comparable listings, then stored as plain columns. This is a realistic pattern for production: expensive AI inference runs in a batch/offline pipeline, and the frontend only ever reads cheap, pre-computed results.
 
+**One genuinely live data source: official ČSÚ/ČÚZK statistics.**
+There is no free public API for real-time individual listings from Czech portals (Sreality, Bezrealitky, …) — and scraping them would violate their terms of service, so the 50 listings above stay clearly-labeled demo data. What *is* free, legal, and genuinely live is the Czech Statistical Office's open dataset `CEN0402` (average real-estate purchase prices, sourced from the ČÚZK land registry's actual recorded transactions, CORS-open, no API key). The banner above the map fetches it directly from `data.csu.gov.cz` on every page load and shows the latest official average price per m² for Prague apartments plus year-on-year change — real official numbers, not a demo. It only resolves to kraj/okres level (Prague as a whole), so it complements the per-district demo listings rather than replacing their granularity.
+
 **CI/CD via Vercel.**
 The project has zero build step, so Vercel's static deployment is used as-is: every push to the connected GitHub branch triggers an automatic redeploy, giving instant preview URLs for pull requests and a stable production URL for `main` — a minimal but real CI/CD loop appropriate for a project this size.
 

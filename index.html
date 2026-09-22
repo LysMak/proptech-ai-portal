@@ -115,6 +115,7 @@
 
   header.app-header,
   .filters-wrap,
+  .market-stat,
   footer.app-footer {
     flex-shrink: 0;
   }
@@ -378,6 +379,30 @@
     padding: 8px 24px;
     background: var(--color-panel-alt);
     border-bottom: 1px solid var(--color-border);
+  }
+
+  /* ---------- Live market stat (ČSÚ open data) ---------- */
+  .market-stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 24px;
+    background: var(--color-primary-dim);
+    color: var(--color-primary-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .market-stat[hidden] { display: none; }
+  .market-stat-source {
+    margin-left: auto;
+    color: inherit;
+    opacity: 0.8;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-decoration: underline;
+    white-space: nowrap;
   }
 
   /* ---------- Layout ---------- */
@@ -658,6 +683,8 @@
     }
     .filters { padding: 12px 16px; }
     .viewport-hint { padding: 8px 16px; }
+    .market-stat { padding: 8px 16px; }
+    .market-stat-source { margin-left: 0; }
 
     /* iOS Safari auto-zooms the page when focusing a text input whose
        font-size is under 16px; keep it at exactly 16px on phones to
@@ -770,6 +797,12 @@
 <div class="viewport-hint" id="viewportHint" data-i18n="viewportHint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
 </div>
 
+<div id="marketStat" class="market-stat" hidden>
+  <span class="market-stat-icon">📊</span>
+  <span id="marketStatText"></span>
+  <a href="https://csu.gov.cz/produkty/ceny_bytu" target="_blank" rel="noopener" class="market-stat-source" data-i18n="marketStatSource">zdroj: ČSÚ</a>
+</div>
+
 <main class="layout">
   <div id="map"></div>
   <div class="list-panel">
@@ -847,6 +880,9 @@
       resetFilters: "Reset filtrů",
       filtersToggle: "Filtry",
       viewportHint: "📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků",
+      marketStatText: "Oficiální průměr ČSÚ/ČÚZK — byty Praha ({year}): {value} {currency}/m² {trend}",
+      marketStatYoy: "r/r",
+      marketStatSource: "zdroj: ČSÚ",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
       errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
@@ -886,6 +922,9 @@
       resetFilters: "Reset filters",
       filtersToggle: "Filters",
       viewportHint: "📍 Showing listings in the current map view — pan or zoom out for more results",
+      marketStatText: "Official CZSO/ČÚZK average — Prague apartments ({year}): {value} {currency}/m² {trend}",
+      marketStatYoy: "YoY",
+      marketStatSource: "source: CZSO",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
       errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
@@ -1049,6 +1088,86 @@
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // ------------------------------------------------------------
+  // Live market context — Czech Statistical Office (ČSÚ) open data
+  //
+  // CEN0402 is ČSÚ's free, CORS-open dataset of average real-estate
+  // purchase prices sourced from the ČÚZK land registry (the official
+  // record of actual sale transactions, not asking prices). It only
+  // breaks down to kraj/okres level, so "Hlavní město Praha" (code
+  // CZ010) is the finest resolution available — one city-wide figure,
+  // not per-district — unlike the 50 demo listings above it. It's
+  // fetched fresh from data.csu.gov.cz on every page load: real,
+  // official, and genuinely live, just annual rather than per-listing.
+  // ------------------------------------------------------------
+  const CSU_DATASET_URL =
+    "https://data.csu.gov.cz/api/dotaz/v1/data/sady/CEN0402?format=JSON_STAT&rozsah=CELA_SADA";
+  let marketStatData = null;
+
+  // Generic JSON-stat value lookup: `selection` maps each dimension id
+  // (as listed in dataset.id) to the category key to pick within it.
+  function jsonStatValue(dataset, selection) {
+    let flat = 0;
+    for (let d = 0; d < dataset.id.length; d++) {
+      const dimId = dataset.id[d];
+      const idx = dataset.dimension[dimId].category.index[selection[dimId]];
+      flat = flat * dataset.size[d] + idx;
+    }
+    return dataset.value[flat];
+  }
+
+  async function loadMarketStat() {
+    try {
+      const res = await fetch(CSU_DATASET_URL);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const ds = await res.json();
+
+      const yearLabels = ds.dimension.CAS1R3R1.category.label;
+      const years = Object.keys(yearLabels)
+        .filter((k) => /^\d{4}$/.test(k))
+        .sort();
+      const latestYear = years[years.length - 1];
+      const prevYear = years.length > 1 ? years[years.length - 2] : null;
+
+      // 0 = "Celkem" (all municipality sizes), CZ010 = Hlavní město
+      // Praha, 7432 = the "average unit purchase price" indicator,
+      // 10602 = "Byty" (apartments, as opposed to family houses).
+      const base = { VELSKUPOBC: "0", Uz023h22: "CZ010", IndicatorType: "7432", REPRCENNEM: "10602" };
+      const latestValue = jsonStatValue(ds, { ...base, CAS1R3R1: latestYear });
+      const prevValue = prevYear ? jsonStatValue(ds, { ...base, CAS1R3R1: prevYear }) : null;
+
+      marketStatData = {
+        year: latestYear,
+        value: latestValue,
+        trendPct: prevValue ? (latestValue / prevValue - 1) * 100 : null,
+      };
+      renderMarketStat();
+    } catch (err) {
+      // Non-critical: the rest of the app works fine without this
+      // widget, so just log it and leave the banner hidden.
+      console.warn("ČSÚ market stat unavailable:", err);
+    }
+  }
+
+  function renderMarketStat() {
+    if (!marketStatData) return;
+    const el = document.getElementById("marketStat");
+    const valueFmt = new Intl.NumberFormat(currentLocale === "en" ? "en-US" : "cs-CZ").format(
+      Math.round(marketStatData.value)
+    );
+    let trend = "";
+    if (marketStatData.trendPct != null) {
+      const sign = marketStatData.trendPct >= 0 ? "+" : "";
+      trend = `(${sign}${marketStatData.trendPct.toFixed(1)}% ${t("marketStatYoy")})`;
+    }
+    document.getElementById("marketStatText").textContent = t("marketStatText")
+      .replace("{year}", marketStatData.year)
+      .replace("{value}", valueFmt)
+      .replace("{currency}", t("currency"))
+      .replace("{trend}", trend);
+    el.hidden = false;
   }
 
   // ------------------------------------------------------------
@@ -1396,6 +1515,7 @@
     // Re-render markers/popups too, since their titles are language-dependent
     renderMarkers(allProperties);
     updateMarkerVisibility(getFilteredProperties());
+    renderMarketStat();
   }
 
   const settingsToggle = document.getElementById("settingsToggle");
@@ -1445,6 +1565,7 @@
   // Boot
   // ------------------------------------------------------------
   loadPropertiesInView();
+  loadMarketStat();
 })();
 </script>
 </body>
