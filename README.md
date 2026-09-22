@@ -28,12 +28,14 @@ Kupující a investoři potřebují rychlou odpověď na otázku: **je tato nab�
 | Layer | Technology | Why |
 |---|---|---|
 | Frontend | HTML5, CSS3 (Grid & Flexbox), Vanilla JavaScript (ES6+) | No framework overhead, fast to load, easy to audit — appropriate for a focused portfolio project |
-| Map | [Leaflet.js](https://leafletjs.com/) + CARTO dark tiles | Free, open-source, no API key required |
-| Backend & DB | [Supabase](https://supabase.com/) (managed PostgreSQL + auto-generated REST API) | Zero backend code to maintain; Postgres gives real relational guarantees (constraints, generated columns) |
+| Map | [Leaflet.js](https://leafletjs.com/) + OpenStreetMap / Esri Dark Gray Canvas | Free, open-source, no API key required, user-selectable light/dark basemap |
+| Backend & DB | [Supabase](https://supabase.com/) (managed PostgreSQL + auto-generated REST API) | Zero backend code to maintain; Postgres gives real relational guarantees (constraints, generated columns, foreign keys) |
 | Data access | `@supabase/supabase-js` v2 via CDN | Official client, no build step needed |
 | Security | PostgreSQL Row Level Security (RLS) | Public `anon` key can only `SELECT` — enforced at the database layer, not in application code |
-| AI layer | Pre-generated valuation summaries (Claude 3.5 Sonnet) | Simulates an AI pricing-assistant feature without needing a live inference endpoint / budget |
-| Hosting / CI-CD | GitHub + Vercel | Push-to-deploy static hosting, zero configuration for a static site |
+| AI layer | Pre-generated valuation summaries (Claude 3.5 Sonnet), bilingual (CS/EN) | Simulates an AI pricing-assistant feature without needing a live inference endpoint / budget |
+| Live external data | [ČSÚ](https://csu.gov.cz/) open-data API (`data.csu.gov.cz`) | Free, CORS-open, official average real-estate prices — genuinely live, not scraped |
+| Testing | [Vitest](https://vitest.dev/) unit tests over `utils.js` | Dev-only dependency — never shipped to the browser, doesn't affect the static deploy |
+| Hosting / CI-CD | GitHub + Vercel + GitHub Actions | Push-to-deploy static hosting; Actions runs the test suite on every push/PR |
 | Budget | **0 CZK** | Every service used is on a free tier |
 
 ---
@@ -60,6 +62,13 @@ npx serve .
 # http://localhost:5500
 ```
 
+To run the unit test suite (optional — it's dev tooling, not needed to run the site itself):
+
+```bash
+npm install
+npm test
+```
+
 For the full click-by-click setup (creating the Supabase project, running the schema, deploying to Vercel), see [`INSTRUCTIONS.md`](./INSTRUCTIONS.md).
 
 ---
@@ -68,9 +77,15 @@ For the full click-by-click setup (creating the Supabase project, running the sc
 
 ```
 .
-├── schema.sql       # PostgreSQL schema + RLS policy + seed data (run in Supabase SQL Editor)
-├── config.js        # Supabase URL + anon key (the only file you edit)
-├── index.html        # Full application: markup, styles, and client-side logic
+├── schema.sql               # PostgreSQL schema + RLS policies + seed data (run in Supabase SQL Editor)
+├── config.js                # Supabase URL + anon key (the only file you edit)
+├── index.html               # Full application: markup, styles, and client-side logic
+├── utils.js                 # Pure helper functions, shared by index.html and the test suite
+├── tests/
+│   └── utils.test.js        # Vitest unit tests for utils.js
+├── .github/workflows/
+│   └── test.yml             # Runs the test suite on every push/PR
+├── package.json              # Dev-only: the test runner, never shipped to the browser
 └── README.md
 ```
 
@@ -102,15 +117,20 @@ The listing set loaded into memory is already scoped to the map viewport by `pro
 **Bilingual UI without a translation service.**
 The interface switches between Czech and English via a small in-browser dictionary (`I18N` in `index.html`) applied through `data-i18n` attributes — no i18n library or server round-trip needed for a UI this size. Listing content is trickier: `title`/`ai_summary` and their `title_en`/`ai_summary_en` counterparts are both stored as plain columns, generated together (and kept numerically consistent) rather than translated live, matching the same "pre-computed AI output" philosophy used for the deal ratings. `deal_rating` itself is the one exception — it's stored only in Czech, and its English label is derived client-side from the same leading +/- percentage, so the two languages can never drift out of sync on the underlying number. District names are intentionally left untranslated in both languages, the way a real Prague listings site would keep "Vinohrady" or "Malá Strana" as proper nouns.
 
+**Price history and a batch-loaded sparkline.**
+A separate `price_history` table (`property_id` FK, `price`, `recorded_at`) stores several dated price points per listing, the most recent always matching that listing's current `price`. Rather than firing one query per card (an N+1 pattern that would scale badly), the frontend batch-fetches history for every currently-visible property in a single `.in('property_id', ids)` query right after the bounding-box fetch resolves, caching it in memory per property so panning back to an already-seen area never re-fetches it. Each card renders a small inline SVG sparkline plus a % change, colored the same way as the deal-rating badges (green = price fell, red = price rose).
+
+**Pure functions extracted for unit testing.**
+`utils.js` holds the app's DOM-free, side-effect-free logic — deal-rating classification and translation, price formatting, the ČSÚ JSON-stat value lookup, year-on-year and price-history trend math, and the sparkline SVG renderer — loaded as a plain `<script>` in the browser and imported by [Vitest](https://vitest.dev/) in `tests/utils.test.js`. A GitHub Actions workflow (`.github/workflows/test.yml`) runs that suite on every push and pull request. `package.json`/`node_modules` are dev-only: Vercel serves the static files regardless of whether `npm install` even runs, so this adds real test coverage without touching the production bundle or the 0 CZK budget.
+
 ---
 
 ## 6. Possible Extensions
 
-- Replace static seed data with a scraper/ingestion job writing into the same schema.
 - Add authentication (Supabase Auth) and a saved-favourites feature per user.
-- Add a `properties_history` table + a price-trend sparkline per listing.
 - Move from client-side to PostgREST-level filtering (`?district=eq.Karlín`) for larger datasets.
 - Swap pre-generated AI summaries for a live Claude API call behind a serverless function, with response caching.
+- Expand test coverage from pure functions (`utils.js`) to integration tests against a local Supabase instance.
 
 ---
 

@@ -1,0 +1,11 @@
+{
+  "name": "proptech-ai-portal",
+  "private": true,
+  "description": "PropTech Real Estate AI Analytics Portal (Praha) — static site, no build step. This package.json exists only for the dev-time test suite.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  }
+}

@@ -546,6 +546,21 @@
     color: var(--color-text-dim);
   }
 
+  .card-history {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 2px;
+    width: fit-content;
+  }
+  .card-history .sparkline { display: block; flex-shrink: 0; }
+  .history-change {
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+  .history-change.history-down { color: var(--color-good); }
+  .history-change.history-up { color: var(--color-bad); }
+
   .deal-badge {
     display: inline-block;
     font-size: 0.76rem;
@@ -832,6 +847,7 @@
 </footer>
 
 <script src="config.js"></script>
+<script src="utils.js"></script>
 <script>
 (function () {
   "use strict";
@@ -840,6 +856,7 @@
   // State
   // ------------------------------------------------------------
   let allProperties = [];   // properties currently loaded for the visible map viewport
+  let historyByPropertyId = new Map(); // price_history rows (price, recorded_at), batch-loaded alongside allProperties
   let activeId = null;      // currently selected property id
   let districtsSeen = new Set(); // district names seen so far, to build the filter dropdown incrementally
   let activeDealFilters = new Set(["deal-good", "deal-neutral", "deal-bad"]); // which colors to show
@@ -1057,31 +1074,26 @@
     return new Intl.NumberFormat(currentLocale === "en" ? "en-US" : "cs-CZ", { maximumFractionDigits: 0 }).format(number) + " " + t("currency");
   }
 
+  // dealClass, dealRatingLabel, formatPriceShort, jsonStatValue,
+  // computeYoyTrendPct, computeHistoryChangePct and sparklineSvg all
+  // live in utils.js (loaded above) as plain, DOM-free functions —
+  // that's what lets tests/utils.test.js exercise them directly. The
+  // thin wrappers below just supply this page's current locale/i18n.
   function formatPriceShort(price) {
-    const millions = Math.round((price / 1000000) * 100) / 100;
-    return millions + "M " + t("currency");
+    return PropTechUtils.formatPriceShort(price, t("currency"));
   }
 
-  // dealRating is always the raw Czech DB value (e.g. "Pod tržní cenou (-8 %)");
-  // this classifies it purely from the leading +/- sign, so it works
-  // regardless of which language it's about to be displayed in.
   function dealClass(dealRating) {
-    if (/-\s?\d/.test(dealRating)) return "deal-good";
-    if (/\+\s?\d/.test(dealRating)) return "deal-bad";
-    return "deal-neutral";
+    return PropTechUtils.dealClass(dealRating);
   }
 
-  // Builds the display label for a deal_rating in the active language.
-  // Czech is stored verbatim; English is derived from the same leading
-  // percentage so the two can never disagree on the underlying number.
   function dealRatingDisplay(dealRating) {
-    if (currentLocale === "cs") return dealRating;
-    const m = dealRating.match(/([+-]\d+)\s*%/);
-    if (!m) return t("marketPrice");
-    const pct = parseInt(m[1], 10);
-    if (pct <= -12) return `${t("greatDeal")} (${pct}%)`;
-    if (pct < 0) return `${t("belowMarket")} (${pct}%)`;
-    return `${t("aboveMarket")} (+${pct}%)`;
+    return PropTechUtils.dealRatingLabel(dealRating, currentLocale, dealRating, {
+      marketPrice: t("marketPrice"),
+      belowMarket: t("belowMarket"),
+      greatDeal: t("greatDeal"),
+      aboveMarket: t("aboveMarket"),
+    });
   }
 
   function escapeHtml(str) {
@@ -1106,18 +1118,6 @@
     "https://data.csu.gov.cz/api/dotaz/v1/data/sady/CEN0402?format=JSON_STAT&rozsah=CELA_SADA";
   let marketStatData = null;
 
-  // Generic JSON-stat value lookup: `selection` maps each dimension id
-  // (as listed in dataset.id) to the category key to pick within it.
-  function jsonStatValue(dataset, selection) {
-    let flat = 0;
-    for (let d = 0; d < dataset.id.length; d++) {
-      const dimId = dataset.id[d];
-      const idx = dataset.dimension[dimId].category.index[selection[dimId]];
-      flat = flat * dataset.size[d] + idx;
-    }
-    return dataset.value[flat];
-  }
-
   async function loadMarketStat() {
     try {
       const res = await fetch(CSU_DATASET_URL);
@@ -1135,13 +1135,13 @@
       // Praha, 7432 = the "average unit purchase price" indicator,
       // 10602 = "Byty" (apartments, as opposed to family houses).
       const base = { VELSKUPOBC: "0", Uz023h22: "CZ010", IndicatorType: "7432", REPRCENNEM: "10602" };
-      const latestValue = jsonStatValue(ds, { ...base, CAS1R3R1: latestYear });
-      const prevValue = prevYear ? jsonStatValue(ds, { ...base, CAS1R3R1: prevYear }) : null;
+      const latestValue = PropTechUtils.jsonStatValue(ds, { ...base, CAS1R3R1: latestYear });
+      const prevValue = prevYear ? PropTechUtils.jsonStatValue(ds, { ...base, CAS1R3R1: prevYear }) : null;
 
       marketStatData = {
         year: latestYear,
         value: latestValue,
-        trendPct: prevValue ? (latestValue / prevValue - 1) * 100 : null,
+        trendPct: PropTechUtils.computeYoyTrendPct(latestValue, prevValue),
       };
       renderMarketStat();
     } catch (err) {
@@ -1198,6 +1198,7 @@
 
       allProperties = data || [];
       populateDistrictFilter(allProperties);
+      await loadHistoryFor(allProperties);
       renderMarkers(allProperties);
       applyFiltersAndRender();
 
@@ -1211,6 +1212,33 @@
         `<div class="error-state">${t("errorLoad").replace("{err}", escapeHtml(err.message || String(err)))}</div>`;
     } finally {
       fetchInFlight = false;
+    }
+  }
+
+  // Batch-fetches price_history for every property in `properties` that
+  // we haven't already loaded, in a single `.in()` query — the same
+  // "scope the query to what's on screen" idea as properties_in_bbox,
+  // just for a second table instead of a second round trip per card.
+  async function loadHistoryFor(properties) {
+    const idsToFetch = properties.map((p) => p.id).filter((id) => !historyByPropertyId.has(id));
+    if (idsToFetch.length === 0) return;
+
+    try {
+      const { data, error } = await sb
+        .from("price_history")
+        .select("property_id, price, recorded_at")
+        .in("property_id", idsToFetch)
+        .order("recorded_at", { ascending: true });
+
+      if (error) throw error;
+
+      idsToFetch.forEach((id) => historyByPropertyId.set(id, []));
+      (data || []).forEach((row) => {
+        historyByPropertyId.get(row.property_id).push(row);
+      });
+    } catch (err) {
+      // Non-critical: cards just render without a sparkline.
+      console.warn("Price history fetch failed:", err);
     }
   }
 
@@ -1327,6 +1355,34 @@
   // ------------------------------------------------------------
   // Cards rendering
   // ------------------------------------------------------------
+  // Builds the sparkline + change-% block for a card from its batch-
+  // loaded price_history (see loadHistoryFor above). Returns "" when
+  // there's no history yet (e.g. still loading, or fetch failed) so
+  // the card just renders without that block — never breaks the card.
+  function renderHistoryBlock(propertyId) {
+    const history = historyByPropertyId.get(propertyId);
+    if (!history || history.length < 2) return "";
+
+    const prices = history.map((h) => Number(h.price));
+    const svg = PropTechUtils.sparklineSvg(prices, {
+      upColor: "var(--color-bad)",
+      downColor: "var(--color-good)",
+    });
+    if (!svg) return "";
+
+    const changePct = PropTechUtils.computeHistoryChangePct(prices);
+    const changeCls = changePct <= 0 ? "history-down" : "history-up";
+    const sign = changePct > 0 ? "+" : "";
+    const range = `${history[0].recorded_at} → ${history[history.length - 1].recorded_at}`;
+
+    return `
+      <div class="card-history" title="${escapeHtml(range)}">
+        ${svg}
+        <span class="history-change ${changeCls}">${sign}${changePct.toFixed(1)}%</span>
+      </div>
+    `;
+  }
+
   function renderCards(properties) {
     const container = document.getElementById("cardsContainer");
     const countEl = document.getElementById("resultCount");
@@ -1355,6 +1411,7 @@
               <span class="card-price">${formatCzk(p.price)}</span>
               <span class="card-meta">${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
             </div>
+            ${renderHistoryBlock(p.id)}
             <span class="deal-badge ${cls}">${escapeHtml(dealRatingDisplay(p.deal_rating))}</span>
             <div class="ai-summary">
               <span class="ai-icon">🤖</span>
