@@ -89,11 +89,34 @@
   html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
     background: var(--color-bg);
     color: var(--color-text);
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
     transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  /* Flex-column shell: header/filters/footer size to their content,
+     main.layout gets exactly what's left. This avoids hardcoding a
+     "header is N px tall" guess (which drifts every time the header
+     gains a row) and, via 100dvh, accounts for mobile browsers'
+     collapsible address bar instead of the always-too-tall 100vh. */
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    /* auto rather than hidden: normally nothing overflows (main.layout
+       absorbs all remaining space), but on a very short viewport
+       (landscape phone, on-screen keyboard open) this lets the page
+       scroll instead of silently clipping the map/list. */
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  header.app-header,
+  .filters-wrap,
+  footer.app-footer {
+    flex-shrink: 0;
   }
 
   a { color: inherit; }
@@ -189,6 +212,10 @@
   .settings-wrap {
     position: relative;
     flex-shrink: 0;
+    /* Keeps the gear button pinned to the right edge of its own flex
+       line even when the header wraps onto multiple lines (e.g. on
+       a narrow phone), instead of drifting to the left. */
+    margin-left: auto;
   }
 
   .settings-panel {
@@ -357,7 +384,8 @@
   main.layout {
     display: grid;
     grid-template-columns: 1.3fr 1fr;
-    height: calc(100vh - 128px);
+    flex: 1 1 auto;
+    min-height: 0; /* let the grid children size within the remaining flex space instead of overflowing it */
   }
 
   #map {
@@ -578,21 +606,75 @@
   }
 
   /* ---------- Responsive ---------- */
+  .filters-toggle { display: none; }
+
   @media (max-width: 900px) {
+    /* Map and list now split whatever height main.layout actually has
+       (flex: 1 1 auto from the body's remaining space) using fr units,
+       instead of raw vh — vh is measured against the largest possible
+       mobile viewport and stays wrong while the browser's address bar
+       is showing, fr just divides up the real remaining space. */
     main.layout {
       grid-template-columns: 1fr;
-      grid-template-rows: 42vh 1fr;
-      height: auto;
+      grid-template-rows: minmax(200px, 1fr) minmax(240px, 1.3fr);
     }
-    #map { height: 42vh; }
+    #map { height: 100%; }
     .list-panel {
       border-left: none;
       border-top: 1px solid var(--color-border);
-      height: auto;
-      max-height: 58vh;
+      height: 100%;
+      max-height: none;
     }
+
+    header.app-header { padding: 10px 16px; }
+    .brand h1 { font-size: 1.1rem; }
     .stats-bar { justify-content: flex-start; width: 100%; }
     .stat { text-align: left; }
+
+    /* Filters collapse behind a toggle button so the map is visible
+       without scrolling past a wall of controls first. */
+    .filters-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 16px 10px;
+      background: transparent;
+      border: 1px solid var(--color-border);
+      color: var(--color-text-dim);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .filters-toggle.expanded {
+      border-color: var(--color-primary);
+      color: var(--color-text);
+    }
+    .filters-wrap {
+      display: none;
+    }
+    .filters-wrap.expanded {
+      display: block;
+    }
+    .filters { padding: 12px 16px; }
+    .viewport-hint { padding: 8px 16px; }
+
+    /* iOS Safari auto-zooms the page when focusing a text input whose
+       font-size is under 16px; keep it at exactly 16px on phones to
+       stop that from happening on the search field. */
+    .filters input,
+    .filters select {
+      font-size: 16px;
+    }
+
+    /* The deal-rating chips are the one row most likely to overflow a
+       phone screen (3 chips of full-length text); let them wrap onto
+       their own lines instead of getting clipped or forcing a
+       horizontal scrollbar. */
+    .deal-filter {
+      flex-wrap: wrap;
+      flex: 1 1 100%;
+    }
   }
 </style>
 </head>
@@ -641,6 +723,11 @@
   </div>
 </header>
 
+<button id="filtersToggle" class="filters-toggle" type="button" aria-expanded="false" aria-controls="filtersWrap">
+  <span>🔍</span><span data-i18n="filtersToggle">Filtry</span>
+</button>
+
+<div id="filtersWrap" class="filters-wrap">
 <div class="filters">
   <input
     type="text"
@@ -681,6 +768,7 @@
   <button class="reset" id="filterReset" type="button" data-i18n="resetFilters">Reset filtrů</button>
 </div>
 <div class="viewport-hint" id="viewportHint" data-i18n="viewportHint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
+</div>
 
 <main class="layout">
   <div id="map"></div>
@@ -757,6 +845,7 @@
       sortPpsqmAsc: "Kč/m²: od nejnižší",
       sortPpsqmDesc: "Kč/m²: od nejvyšší",
       resetFilters: "Reset filtrů",
+      filtersToggle: "Filtry",
       viewportHint: "📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
@@ -795,6 +884,7 @@
       sortPpsqmAsc: "CZK/m²: low to high",
       sortPpsqmDesc: "CZK/m²: high to low",
       resetFilters: "Reset filters",
+      filtersToggle: "Filters",
       viewportHint: "📍 Showing listings in the current map view — pan or zoom out for more results",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
@@ -872,8 +962,12 @@
     const labels = {};
     labels[t("mapColor")] = colorLayer;
     labels[t("mapDark")] = darkLayer;
+    // On phones the map itself is short; an always-expanded switcher
+    // would cover a big chunk of it, so collapse it to an icon there
+    // (Leaflet expands it back on tap/hover either way).
+    const isNarrow = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
     mapLayersControl = L.control
-      .layers(labels, null, { position: "topright", collapsed: false })
+      .layers(labels, null, { position: "topright", collapsed: isNarrow })
       .addTo(map);
   }
   // Created for real inside applyTranslations() near the bottom of this
@@ -1306,6 +1400,16 @@
   });
   document.querySelectorAll(".settings-option[data-lang-choice]").forEach((btn) => {
     btn.addEventListener("click", () => setLocale(btn.dataset.langChoice));
+  });
+
+  // Mobile-only: filters start collapsed so the map/list are visible
+  // right away; this button (hidden above 900px via CSS) reveals them.
+  const filtersToggle = document.getElementById("filtersToggle");
+  const filtersWrap = document.getElementById("filtersWrap");
+  filtersToggle.addEventListener("click", () => {
+    const expanded = filtersWrap.classList.toggle("expanded");
+    filtersToggle.classList.toggle("expanded", expanded);
+    filtersToggle.setAttribute("aria-expanded", String(expanded));
   });
 
   applyTranslations();
