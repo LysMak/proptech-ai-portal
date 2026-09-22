@@ -455,12 +455,22 @@
   const PRAGUE_KARLIN = [50.0955, 14.4487];
   const map = L.map("map", { zoomControl: true }).setView(PRAGUE_KARLIN, 13);
 
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
-    maxZoom: 19,
-  }).addTo(map);
+  // Esri "Dark Gray Canvas" — free, no API key required, matches the dark UI.
+  // Split into a base layer (background) and a reference layer (street/place
+  // labels), stacked so labels render above the canvas but below markers.
+  L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+    {
+      attribution:
+        "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community",
+      maxZoom: 16,
+    }
+  ).addTo(map);
+
+  L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 16 }
+  ).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
 
