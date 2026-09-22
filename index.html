@@ -206,6 +206,13 @@
     flex-direction: column;
     gap: 14px;
   }
+  /* The [hidden] attribute has the same specificity as the class rule
+     above, and author styles win ties over the UA stylesheet — so
+     without this, "display: flex" here would keep the panel visible
+     even while hidden is set. */
+  .settings-panel[hidden] {
+    display: none;
+  }
 
   .settings-group-label {
     font-size: 0.72rem;
