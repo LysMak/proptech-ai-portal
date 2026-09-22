@@ -545,7 +545,6 @@
     background: transparent;
     color: var(--color-text-dim);
     font-size: 0.72rem;
-    text-decoration: none;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -555,6 +554,15 @@
   .copy-link-btn:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
+  }
+  .copy-link-btn.copied {
+    border-color: var(--color-good);
+    color: var(--color-good);
+    width: auto;
+    padding: 0 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
   }
 
   .card-price-row {
@@ -929,7 +937,9 @@
       marketStatText: "Oficiální průměr ČSÚ/ČÚZK — byty Praha ({year}): {value} {currency}/m² {trend}",
       marketStatYoy: "r/r",
       marketStatSource: "zdroj: ČSÚ",
-      copyLinkAria: "Otevřít tuto nabídku v nové kartě",
+      copyLinkAria: "Kopírovat odkaz na tuto nabídku",
+      copyLinkDone: "✓ Zkopírováno",
+      copyLinkFallback: "Zkopírujte odkaz na tuto nabídku:",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
       errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
@@ -972,7 +982,9 @@
       marketStatText: "Official CZSO/ČÚZK average — Prague apartments ({year}): {value} {currency}/m² {trend}",
       marketStatYoy: "YoY",
       marketStatSource: "source: CZSO",
-      copyLinkAria: "Open this listing in a new tab",
+      copyLinkAria: "Copy link to this listing",
+      copyLinkDone: "✓ Copied",
+      copyLinkFallback: "Copy this link to the listing:",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
       errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
@@ -1456,7 +1468,7 @@
               <h3 class="card-title">${escapeHtml(title)}</h3>
               <div class="card-top-actions">
                 <span class="district-badge">${escapeHtml(p.district)}</span>
-                <a class="copy-link-btn" href="${escapeHtml(permalinkFor(p.id))}" target="_blank" rel="noopener" aria-label="${escapeHtml(t("copyLinkAria"))}" title="${escapeHtml(t("copyLinkAria"))}">🔗</a>
+                <button type="button" class="copy-link-btn" data-copy-id="${p.id}" aria-label="${escapeHtml(t("copyLinkAria"))}" title="${escapeHtml(t("copyLinkAria"))}">🔗</button>
               </div>
             </div>
             <div class="card-price-row">
@@ -1485,11 +1497,11 @@
       });
     });
 
-    // It's a real <a href> now (so it works with cmd/ctrl-click, "open
-    // in new tab", etc. like any other link) — this just stops the
-    // click from also bubbling up into the card's own click handler.
     container.querySelectorAll(".copy-link-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => e.stopPropagation());
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        copyPermalink(Number(btn.dataset.copyId), btn);
+      });
     });
   }
 
@@ -1542,6 +1554,23 @@
     } catch (e) {
       /* ignore — URL just won't reflect the selection */
     }
+  }
+
+  async function copyPermalink(id, button) {
+    const link = permalinkFor(id);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch (e) {
+      window.prompt(t("copyLinkFallback"), link);
+      return;
+    }
+    const original = button.textContent;
+    button.textContent = t("copyLinkDone");
+    button.classList.add("copied");
+    setTimeout(() => {
+      button.textContent = original;
+      button.classList.remove("copied");
+    }, 1500);
   }
 
   // If the page was opened with ?id=<propertyId>, recenter the map on
