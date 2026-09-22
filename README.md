@@ -4,8 +4,8 @@
 >
 > AI-poháněná tržní analytika pro rezidenční nemovitosti v Praze — interaktivní mapa a analytický portál, který v reálném čase označuje podhodnocené nabídky.
 
-**Live demo:** _add your Vercel URL here after deployment_
-**Repository:** _add your GitHub URL here_
+**Live demo:** https://proptech-ai-portal.vercel.app
+**Repository:** https://github.com/LysMak/proptech-ai-portal
 
 ---
 
