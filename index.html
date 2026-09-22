@@ -979,13 +979,30 @@
   // Leaflet map setup — centered on Karlín, Prague
   // ------------------------------------------------------------
   const PRAGUE_KARLIN = [50.0955, 14.4487];
-  const map = L.map("map", { zoomControl: true }).setView(PRAGUE_KARLIN, 13);
+  // This is a Prague-only listings map, so it's never useful to zoom out
+  // to a world view — and Leaflet's tile layers repeat infinitely along
+  // longitude by default, which looks broken once the (only ever
+  // Prague-located) markers are nowhere near most of the repeated
+  // copies. minZoom keeps the view no wider than roughly Central Europe,
+  // and maxBounds (with noWrap on every tile layer below) stops panning
+  // into the repeated/empty area entirely.
+  const CZ_BOUNDS = [
+    [48.3, 11.5],
+    [51.5, 19.5],
+  ];
+  const map = L.map("map", {
+    zoomControl: true,
+    minZoom: 8,
+    maxBounds: CZ_BOUNDS,
+    maxBoundsViscosity: 0.8,
+  }).setView(PRAGUE_KARLIN, 13);
 
   // Two free, no-API-key basemaps the user can switch between.
   const colorLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     subdomains: "abc",
     maxZoom: 19,
+    noWrap: true,
   });
 
   // Esri "Dark Gray Canvas" — split into a base layer (background) and a
@@ -997,11 +1014,12 @@
         attribution:
           "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS User Community",
         maxZoom: 16,
+        noWrap: true,
       }
     ),
     L.tileLayer(
       "https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 16 }
+      { maxZoom: 16, noWrap: true }
     ),
   ]);
 
