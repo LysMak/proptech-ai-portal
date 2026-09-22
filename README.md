@@ -93,8 +93,11 @@ Rather than calling a paid LLM API on every page load (which would break the 0 C
 **CI/CD via Vercel.**
 The project has zero build step, so Vercel's static deployment is used as-is: every push to the connected GitHub branch triggers an automatic redeploy, giving instant preview URLs for pull requests and a stable production URL for `main` — a minimal but real CI/CD loop appropriate for a project this size.
 
-**Client-side filtering, not re-fetching.**
-The full listing set is fetched once on load; search, district, price-range, and sort filters all run client-side against the in-memory array. This keeps the UI instant and avoids unnecessary round-trips for a dataset of this scale, while remaining a straightforward place to swap in server-side filtering (`.eq()`, `.gte()`, `.ilike()` on the Supabase query builder) if the dataset grows.
+**Two-layer filtering: server-side by geography, client-side by text/price.**
+The listing set loaded into memory is already scoped to the map viewport by `properties_in_bbox` (see above); search, district, price-range, and sort filters then run client-side against that smaller in-memory array. This keeps typing in the search box instant while still avoiding a full-table fetch, and remains a straightforward place to push district/price filtering server-side too (`.eq()`, `.gte()` on the Supabase query builder) if the dataset grows much larger.
+
+**Bilingual UI without a translation service.**
+The interface switches between Czech and English via a small in-browser dictionary (`I18N` in `index.html`) applied through `data-i18n` attributes — no i18n library or server round-trip needed for a UI this size. Listing content is trickier: `title`/`ai_summary` and their `title_en`/`ai_summary_en` counterparts are both stored as plain columns, generated together (and kept numerically consistent) rather than translated live, matching the same "pre-computed AI output" philosophy used for the deal ratings. `deal_rating` itself is the one exception — it's stored only in Czech, and its English label is derived client-side from the same leading +/- percentage, so the two languages can never drift out of sync on the underlying number. District names are intentionally left untranslated in both languages, the way a real Prague listings site would keep "Vinohrady" or "Malá Strana" as proper nouns.
 
 ---
 

@@ -185,6 +185,62 @@
     transform: translateY(-1px);
   }
 
+  /* ---------- Settings panel ---------- */
+  .settings-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .settings-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1100;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .settings-group-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-dim);
+    margin-bottom: 8px;
+  }
+
+  .settings-options {
+    display: flex;
+    gap: 8px;
+  }
+
+  .settings-option {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--color-border);
+    background: var(--color-panel-alt);
+    color: var(--color-text);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+  }
+  .settings-option:hover { border-color: var(--color-primary); }
+  .settings-option.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-dim);
+    color: var(--color-primary-text);
+    font-weight: 600;
+  }
+
   /* ---------- Filters ---------- */
   .filters {
     display: flex;
@@ -488,24 +544,43 @@
   <div class="brand">
     <div>
       <h1>PropTech AI Analytics <span class="tag">Praha</span></h1>
-      <p>Real-time market intelligence for Prague residential listings</p>
+      <p data-i18n="subtitle">Real-time market intelligence for Prague residential listings</p>
     </div>
   </div>
   <div class="stats-bar" id="statsBar">
     <div class="stat">
       <div class="value" id="statCount">—</div>
-      <div class="label">Nabídek</div>
+      <div class="label" data-i18n="statListings">Nabídek</div>
     </div>
     <div class="stat">
       <div class="value" id="statAvgPrice">—</div>
-      <div class="label">Ø Kč / m²</div>
+      <div class="label" data-i18n="statAvgPrice">Ø Kč / m²</div>
     </div>
     <div class="stat">
       <div class="value" id="statGoodDeals">—</div>
-      <div class="label">Pod tržní cenou</div>
+      <div class="label" data-i18n="statGoodDeals">Pod tržní cenou</div>
     </div>
   </div>
-  <button id="themeToggle" class="theme-toggle" type="button" aria-label="Přepnout světlý/tmavý režim">🌙</button>
+
+  <div class="settings-wrap">
+    <button id="settingsToggle" class="theme-toggle" type="button" aria-label="Nastavení" aria-expanded="false">⚙️</button>
+    <div id="settingsPanel" class="settings-panel" hidden>
+      <div class="settings-group">
+        <div class="settings-group-label" data-i18n="themeLabel">Motiv</div>
+        <div class="settings-options">
+          <button type="button" class="settings-option" data-theme-choice="dark">🌙 <span data-i18n="themeDark">Tmavý</span></button>
+          <button type="button" class="settings-option" data-theme-choice="light">☀️ <span data-i18n="themeLight">Světlý</span></button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label" data-i18n="languageLabel">Jazyk</div>
+        <div class="settings-options">
+          <button type="button" class="settings-option" data-lang-choice="cs">Čeština</button>
+          <button type="button" class="settings-option" data-lang-choice="en">English</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </header>
 
 <div class="filters">
@@ -513,29 +588,30 @@
     type="text"
     id="filterSearch"
     class="field-search"
+    data-i18n-placeholder="searchPlaceholder"
     placeholder="Hledat podle názvu nebo ulice…"
     autocomplete="off"
   />
   <select id="filterDistrict" class="field-district">
-    <option value="">Všechny čtvrti</option>
+    <option value="" data-i18n="allDistricts">Všechny čtvrti</option>
   </select>
   <select id="filterPrice" class="field-price">
-    <option value="">Jakýkoli rozpočet</option>
-    <option value="0-5000000">do 5 mil. Kč</option>
-    <option value="5000000-8000000">5 - 8 mil. Kč</option>
-    <option value="8000000-12000000">8 - 12 mil. Kč</option>
-    <option value="12000000-999999999">12 mil. Kč +</option>
+    <option value="" data-i18n="anyBudget">Jakýkoli rozpočet</option>
+    <option value="0-5000000" data-i18n="budget1">do 5 mil. Kč</option>
+    <option value="5000000-8000000" data-i18n="budget2">5 - 8 mil. Kč</option>
+    <option value="8000000-12000000" data-i18n="budget3">8 - 12 mil. Kč</option>
+    <option value="12000000-999999999" data-i18n="budget4">12 mil. Kč +</option>
   </select>
   <select id="filterSort" class="field-sort">
-    <option value="default">Řadit: výchozí</option>
-    <option value="price-asc">Cena: od nejnižší</option>
-    <option value="price-desc">Cena: od nejvyšší</option>
-    <option value="ppsqm-asc">Kč/m²: od nejnižší</option>
-    <option value="ppsqm-desc">Kč/m²: od nejvyšší</option>
+    <option value="default" data-i18n="sortDefault">Řadit: výchozí</option>
+    <option value="price-asc" data-i18n="sortPriceAsc">Cena: od nejnižší</option>
+    <option value="price-desc" data-i18n="sortPriceDesc">Cena: od nejvyšší</option>
+    <option value="ppsqm-asc" data-i18n="sortPpsqmAsc">Kč/m²: od nejnižší</option>
+    <option value="ppsqm-desc" data-i18n="sortPpsqmDesc">Kč/m²: od nejvyšší</option>
   </select>
-  <button class="reset" id="filterReset" type="button">Reset filtrů</button>
+  <button class="reset" id="filterReset" type="button" data-i18n="resetFilters">Reset filtrů</button>
 </div>
-<div class="viewport-hint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
+<div class="viewport-hint" id="viewportHint" data-i18n="viewportHint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
 
 <main class="layout">
   <div id="map"></div>
@@ -561,7 +637,7 @@
   </div>
 </main>
 
-<footer class="app-footer">
+<footer class="app-footer" data-i18n="footer">
   PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes
 </footer>
 
@@ -579,6 +655,104 @@
   let fetchInFlight = false;
   const markersById = new Map();
   let markersLayer;         // set once the map is initialized below
+  let mapLayersControl;     // set once the map is initialized below, recreated on language change
+
+  // ------------------------------------------------------------
+  // i18n — UI chrome dictionary. Listing content (title/ai_summary)
+  // comes from the DB in both languages (title/title_en, ai_summary/
+  // ai_summary_en); deal_rating is only stored in Czech and translated
+  // on the fly by dealRatingDisplay() below.
+  // ------------------------------------------------------------
+  const I18N = {
+    cs: {
+      subtitle: "Průzkum trhu s nemovitostmi v Praze v reálném čase",
+      statListings: "Nabídek",
+      statAvgPrice: "Ø Kč / m²",
+      statGoodDeals: "Pod tržní cenou",
+      settings: "Nastavení",
+      themeLabel: "Motiv",
+      themeDark: "Tmavý",
+      themeLight: "Světlý",
+      languageLabel: "Jazyk",
+      searchPlaceholder: "Hledat podle názvu nebo ulice…",
+      allDistricts: "Všechny čtvrti",
+      anyBudget: "Jakýkoli rozpočet",
+      budget1: "do 5 mil. Kč",
+      budget2: "5 - 8 mil. Kč",
+      budget3: "8 - 12 mil. Kč",
+      budget4: "12 mil. Kč +",
+      sortDefault: "Řadit: výchozí",
+      sortPriceAsc: "Cena: od nejnižší",
+      sortPriceDesc: "Cena: od nejvyšší",
+      sortPpsqmAsc: "Kč/m²: od nejnižší",
+      sortPpsqmDesc: "Kč/m²: od nejvyšší",
+      resetFilters: "Reset filtrů",
+      viewportHint: "📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků",
+      noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
+      noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
+      errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
+      resultOne: "nabídka",
+      resultMany: "nabídek",
+      footer: "PropTech Real Estate AI Analytics Portal — demo portfolio project · Data a mapa jsou pouze ilustrativní",
+      mapColor: "🎨 Barevná",
+      mapDark: "🌙 Tmavá",
+      currency: "Kč",
+      marketPrice: "Tržní cena",
+      belowMarket: "Pod tržní cenou",
+      greatDeal: "Skvělá nabídka",
+      aboveMarket: "Nadprůměrná cena",
+    },
+    en: {
+      subtitle: "Real-time market intelligence for Prague residential listings",
+      statListings: "Listings",
+      statAvgPrice: "Avg CZK/m²",
+      statGoodDeals: "Below market",
+      settings: "Settings",
+      themeLabel: "Theme",
+      themeDark: "Dark",
+      themeLight: "Light",
+      languageLabel: "Language",
+      searchPlaceholder: "Search by title or street…",
+      allDistricts: "All districts",
+      anyBudget: "Any budget",
+      budget1: "Up to 5M CZK",
+      budget2: "5–8M CZK",
+      budget3: "8–12M CZK",
+      budget4: "12M CZK +",
+      sortDefault: "Sort: default",
+      sortPriceAsc: "Price: low to high",
+      sortPriceDesc: "Price: high to low",
+      sortPpsqmAsc: "CZK/m²: low to high",
+      sortPpsqmDesc: "CZK/m²: high to low",
+      resetFilters: "Reset filters",
+      viewportHint: "📍 Showing listings in the current map view — pan or zoom out for more results",
+      noResultsFilter: "No listings match the selected filters.",
+      noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
+      errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
+      resultOne: "listing",
+      resultMany: "listings",
+      footer: "PropTech Real Estate AI Analytics Portal — demo portfolio project · Data and map are for illustrative purposes only",
+      mapColor: "🎨 Color",
+      mapDark: "🌙 Dark",
+      currency: "CZK",
+      marketPrice: "Market price",
+      belowMarket: "Below market price",
+      greatDeal: "Great deal",
+      aboveMarket: "Above-average price",
+    },
+  };
+
+  let currentLocale = "cs";
+  try {
+    const saved = localStorage.getItem("proptech_site_lang");
+    currentLocale = saved === "en" || saved === "cs" ? saved : (navigator.language || "").toLowerCase().startsWith("en") ? "en" : "cs";
+  } catch (e) {
+    /* localStorage unavailable — default to Czech */
+  }
+
+  function t(key) {
+    return I18N[currentLocale][key];
+  }
 
   // ------------------------------------------------------------
   // Supabase client
@@ -623,16 +797,20 @@
   }
   (savedTheme === "dark" ? darkLayer : colorLayer).addTo(map);
 
-  L.control
-    .layers(
-      { "🎨 Barevná": colorLayer, "🌙 Tmavá": darkLayer },
-      null,
-      { position: "topright", collapsed: false }
-    )
-    .addTo(map);
+  function createMapLayersControl() {
+    if (mapLayersControl) map.removeControl(mapLayersControl);
+    const labels = {};
+    labels[t("mapColor")] = colorLayer;
+    labels[t("mapDark")] = darkLayer;
+    mapLayersControl = L.control
+      .layers(labels, null, { position: "topright", collapsed: false })
+      .addTo(map);
+  }
+  // Created for real inside applyTranslations() near the bottom of this
+  // script, once the i18n dictionary and helper functions it needs exist.
 
   map.on("baselayerchange", (e) => {
-    const theme = e.name.includes("Tmavá") ? "dark" : "color";
+    const theme = e.name === t("mapDark") ? "dark" : "color";
     try {
       localStorage.setItem("proptech_map_theme", theme);
     } catch (e2) {
@@ -646,18 +824,34 @@
   // Helpers
   // ------------------------------------------------------------
   function formatCzk(number) {
-    return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(number) + " Kč";
+    return new Intl.NumberFormat(currentLocale === "en" ? "en-US" : "cs-CZ", { maximumFractionDigits: 0 }).format(number) + " " + t("currency");
   }
 
   function formatPriceShort(price) {
     const millions = Math.round((price / 1000000) * 100) / 100;
-    return millions + "M Kč";
+    return millions + "M " + t("currency");
   }
 
+  // dealRating is always the raw Czech DB value (e.g. "Pod tržní cenou (-8 %)");
+  // this classifies it purely from the leading +/- sign, so it works
+  // regardless of which language it's about to be displayed in.
   function dealClass(dealRating) {
-    if (/-\s?\d/.test(dealRating) || /Skvělá|Pod tržní/i.test(dealRating)) return "deal-good";
-    if (/\+\s?\d/.test(dealRating) || /Nadprůměrná/i.test(dealRating)) return "deal-bad";
+    if (/-\s?\d/.test(dealRating)) return "deal-good";
+    if (/\+\s?\d/.test(dealRating)) return "deal-bad";
     return "deal-neutral";
+  }
+
+  // Builds the display label for a deal_rating in the active language.
+  // Czech is stored verbatim; English is derived from the same leading
+  // percentage so the two can never disagree on the underlying number.
+  function dealRatingDisplay(dealRating) {
+    if (currentLocale === "cs") return dealRating;
+    const m = dealRating.match(/([+-]\d+)\s*%/);
+    if (!m) return t("marketPrice");
+    const pct = parseInt(m[1], 10);
+    if (pct <= -12) return `${t("greatDeal")} (${pct}%)`;
+    if (pct < 0) return `${t("belowMarket")} (${pct}%)`;
+    return `${t("aboveMarket")} (+${pct}%)`;
   }
 
   function escapeHtml(str) {
@@ -698,16 +892,13 @@
       applyFiltersAndRender();
 
       if (allProperties.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.</div>';
+        container.innerHTML = `<div class="empty-state">${t("noResultsViewport")}</div>`;
         document.getElementById("resultCount").textContent = "";
       }
     } catch (err) {
       console.error("Supabase fetch failed:", err);
       container.innerHTML =
-        '<div class="error-state">Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql (RPC properties_in_bbox).<br><small>' +
-        escapeHtml(err.message || String(err)) +
-        "</small></div>";
+        `<div class="error-state">${t("errorLoad").replace("{err}", escapeHtml(err.message || String(err)))}</div>`;
     } finally {
       fetchInFlight = false;
     }
@@ -723,7 +914,7 @@
     newDistricts.forEach((d) => districtsSeen.add(d));
 
     const sorted = [...districtsSeen].sort();
-    select.innerHTML = '<option value="">Všechny čtvrti</option>';
+    select.innerHTML = `<option value="">${t("allDistricts")}</option>`;
     sorted.forEach((d) => {
       const opt = document.createElement("option");
       opt.value = d;
@@ -749,8 +940,9 @@
       });
 
       const marker = L.marker([property.lat, property.lng], { icon }).addTo(markersLayer);
+      const displayTitle = currentLocale === "en" ? property.title_en : property.title;
       marker.bindPopup(
-        `<div class="popup-title">${escapeHtml(property.title)}</div>` +
+        `<div class="popup-title">${escapeHtml(displayTitle)}</div>` +
           `<div class="popup-price">${formatCzk(property.price)} · ${property.area_sqm} m²</div>`
       );
       marker.on("click", () => selectProperty(property.id, { flyTo: false }));
@@ -769,7 +961,10 @@
     const sort = document.getElementById("filterSort").value;
 
     let result = allProperties.filter((p) => {
-      const matchesSearch = !search || p.title.toLowerCase().includes(search);
+      const matchesSearch =
+        !search ||
+        p.title.toLowerCase().includes(search) ||
+        p.title_en.toLowerCase().includes(search);
       const matchesDistrict = !district || p.district === district;
 
       let matchesPrice = true;
@@ -824,10 +1019,10 @@
     const container = document.getElementById("cardsContainer");
     const countEl = document.getElementById("resultCount");
 
-    countEl.textContent = `${properties.length} ${properties.length === 1 ? "nabídka" : "nabídek"}`;
+    countEl.textContent = `${properties.length} ${properties.length === 1 ? t("resultOne") : t("resultMany")}`;
 
     if (properties.length === 0) {
-      container.innerHTML = '<div class="empty-state">Žádné nabídky neodpovídají zvoleným filtrům.</div>';
+      container.innerHTML = `<div class="empty-state">${t("noResultsFilter")}</div>`;
       return;
     }
 
@@ -836,20 +1031,22 @@
         const cls = dealClass(p.deal_rating);
         const active = p.id === activeId ? "active" : "";
         const delay = Math.min(i, 12) * 0.035;
+        const title = currentLocale === "en" ? p.title_en : p.title;
+        const summary = currentLocale === "en" ? p.ai_summary_en : p.ai_summary;
         return `
-          <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(p.title)}" style="animation-delay: ${delay}s">
+          <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(title)}" style="animation-delay: ${delay}s">
             <div class="card-top">
-              <h3 class="card-title">${escapeHtml(p.title)}</h3>
+              <h3 class="card-title">${escapeHtml(title)}</h3>
               <span class="district-badge">${escapeHtml(p.district)}</span>
             </div>
             <div class="card-price-row">
               <span class="card-price">${formatCzk(p.price)}</span>
               <span class="card-meta">${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
             </div>
-            <span class="deal-badge ${cls}">${escapeHtml(p.deal_rating)}</span>
+            <span class="deal-badge ${cls}">${escapeHtml(dealRatingDisplay(p.deal_rating))}</span>
             <div class="ai-summary">
               <span class="ai-icon">🤖</span>
-              <span>${escapeHtml(p.ai_summary)}</span>
+              <span>${escapeHtml(summary)}</span>
             </div>
           </article>
         `;
@@ -936,26 +1133,89 @@
   map.on("moveend", loadPropertiesInView);
 
   // ------------------------------------------------------------
-  // Site theme toggle (dark/light) — the actual theme was already
-  // applied before first paint by the inline script in <head>; this
-  // just syncs the button icon and wires up switching it.
+  // Settings panel — theme (dark/light) and language (cs/en).
+  // The theme was already applied before first paint by the inline
+  // script in <head>; this wires up the panel UI and persistence.
   // ------------------------------------------------------------
-  function updateThemeToggleIcon() {
-    const theme = document.documentElement.getAttribute("data-theme") || "dark";
-    document.getElementById("themeToggle").textContent = theme === "dark" ? "☀️" : "🌙";
-  }
-  updateThemeToggleIcon();
+  function applyTranslations() {
+    document.documentElement.lang = currentLocale;
 
-  document.getElementById("themeToggle").addEventListener("click", () => {
-    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    settingsToggle.setAttribute("aria-label", t("settings"));
+
+    document.querySelectorAll(".settings-option[data-theme-choice]").forEach((btn) => {
+      const theme = document.documentElement.getAttribute("data-theme") || "dark";
+      btn.classList.toggle("active", btn.dataset.themeChoice === theme);
+    });
+    document.querySelectorAll(".settings-option[data-lang-choice]").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.langChoice === currentLocale);
+    });
+
+    createMapLayersControl();
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
     try {
-      localStorage.setItem("proptech_site_theme", next);
+      localStorage.setItem("proptech_site_theme", theme);
     } catch (e) {
       /* ignore — theme just won't persist across reloads */
     }
-    updateThemeToggleIcon();
+    applyTranslations();
+  }
+
+  function setLocale(locale) {
+    if (locale === currentLocale) return;
+    currentLocale = locale;
+    try {
+      localStorage.setItem("proptech_site_lang", locale);
+    } catch (e) {
+      /* ignore — language just won't persist across reloads */
+    }
+    applyTranslations();
+    applyFiltersAndRender();
+    // Re-render markers/popups too, since their titles are language-dependent
+    renderMarkers(allProperties);
+    updateMarkerVisibility(getFilteredProperties());
+  }
+
+  const settingsToggle = document.getElementById("settingsToggle");
+  const settingsPanel = document.getElementById("settingsPanel");
+
+  settingsToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = !settingsPanel.hidden;
+    settingsPanel.hidden = isOpen;
+    settingsToggle.setAttribute("aria-expanded", String(!isOpen));
   });
+
+  document.addEventListener("click", (e) => {
+    if (!settingsPanel.hidden && !settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+      settingsPanel.hidden = true;
+      settingsToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !settingsPanel.hidden) {
+      settingsPanel.hidden = true;
+      settingsToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  document.querySelectorAll(".settings-option[data-theme-choice]").forEach((btn) => {
+    btn.addEventListener("click", () => setTheme(btn.dataset.themeChoice));
+  });
+  document.querySelectorAll(".settings-option[data-lang-choice]").forEach((btn) => {
+    btn.addEventListener("click", () => setLocale(btn.dataset.langChoice));
+  });
+
+  applyTranslations();
 
   // ------------------------------------------------------------
   // Boot
