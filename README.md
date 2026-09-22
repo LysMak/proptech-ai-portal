@@ -1,0 +1,113 @@
+# PropTech Real Estate AI Analytics Portal (Praha)
+
+> AI-powered market intelligence for Prague residential real estate — an interactive map and analytics portal that flags underpriced listings in real time.
+>
+> AI-poháněná tržní analytika pro rezidenční nemovitosti v Praze — interaktivní mapa a analytický portál, který v reálném čase označuje podhodnocené nabídky.
+
+**Live demo:** _add your Vercel URL here after deployment_
+**Repository:** _add your GitHub URL here_
+
+---
+
+## 1. Business Value / Obchodní přínos
+
+Real estate buyers and investors struggle to answer one simple question fast: **is this listing priced fairly for its neighbourhood?** This portal answers that in one glance by combining:
+
+- a **geospatial view** of live listings across Prague's most active districts (Karlín, Vinohrady, Žižkov, Smíchov),
+- a **price-per-m² benchmark** computed directly in the database, and
+- an **AI-generated verdict** ("Pod tržní cenou -8 %", "Tržní cena", "Nadprůměrná cena +5 %") that turns a raw price into an actionable signal.
+
+For a PropTech company like VIAGEM a.s., this pattern — structured listing data + geodata + an AI valuation layer — is a direct proof-of-concept for tools that help agents and buyers price and evaluate property faster and more transparently.
+
+Kupující a investoři potřebují rychlou odpověď na otázku: **je tato nabídka cenově adekvátní pro danou lokalitu?** Portál na to odpovídá na první pohled kombinací mapy, cenového benchmarku za m² a AI hodnocení generovaného pro každou nemovitost.
+
+---
+
+## 2. Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | HTML5, CSS3 (Grid & Flexbox), Vanilla JavaScript (ES6+) | No framework overhead, fast to load, easy to audit — appropriate for a focused portfolio project |
+| Map | [Leaflet.js](https://leafletjs.com/) + CARTO dark tiles | Free, open-source, no API key required |
+| Backend & DB | [Supabase](https://supabase.com/) (managed PostgreSQL + auto-generated REST API) | Zero backend code to maintain; Postgres gives real relational guarantees (constraints, generated columns) |
+| Data access | `@supabase/supabase-js` v2 via CDN | Official client, no build step needed |
+| Security | PostgreSQL Row Level Security (RLS) | Public `anon` key can only `SELECT` — enforced at the database layer, not in application code |
+| AI layer | Pre-generated valuation summaries (Claude 3.5 Sonnet) | Simulates an AI pricing-assistant feature without needing a live inference endpoint / budget |
+| Hosting / CI-CD | GitHub + Vercel | Push-to-deploy static hosting, zero configuration for a static site |
+| Budget | **0 CZK** | Every service used is on a free tier |
+
+---
+
+## 3. Local Setup
+
+This is a static site with no build step — you only need a local HTTP server (opening `index.html` directly via `file://` will work for the UI, but some browsers restrict CDN scripts on `file://`, so a local server is recommended).
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/<your-username>/proptech-ai-portal.git
+cd proptech-ai-portal
+
+# 2. Configure Supabase credentials
+# Edit config.js and set SUPABASE_URL / SUPABASE_ANON_KEY
+# (see INSTRUCTIONS.md for exactly where to find them)
+
+# 3. Serve the folder locally, e.g. with Python:
+python -m http.server 5500
+# or with Node:
+npx serve .
+
+# 4. Open in your browser
+# http://localhost:5500
+```
+
+For the full click-by-click setup (creating the Supabase project, running the schema, deploying to Vercel), see [`INSTRUCTIONS.md`](./INSTRUCTIONS.md).
+
+---
+
+## 4. Project Structure
+
+```
+.
+├── schema.sql       # PostgreSQL schema + RLS policy + seed data (run in Supabase SQL Editor)
+├── config.js        # Supabase URL + anon key (the only file you edit)
+├── index.html        # Full application: markup, styles, and client-side logic
+└── README.md
+```
+
+---
+
+## 5. Architecture & Engineering Approaches
+
+**Row Level Security (RLS) in Supabase.**
+The `properties` table has RLS enabled with a single `SELECT`-only policy (`Allow public read`). The public `anon` key shipped in `config.js` can therefore never insert, update, or delete data — write access would require a `service_role` key that is never exposed to the browser. This mirrors how a real production PropTech backend would separate a public read API from an authenticated write path (e.g. an internal CMS or ingestion pipeline).
+
+**Derived data at the database layer.**
+`price_per_sqm` is a PostgreSQL **generated column** (`generated always as (round(price / area_sqm)) stored`), not something computed and duplicated in application code. This guarantees the value can never drift out of sync with `price` and `area_sqm`, and keeps the benchmarking logic in one place.
+
+**Geospatial data handling.**
+Each listing stores `lat`/`lng` as `double precision`. The frontend renders them as custom Leaflet `divIcon` markers whose color encodes the AI deal rating (green = under market, amber = at market, red = above market), so the map itself communicates the analytics — not just location. Clicking a card flies the map to the corresponding marker and opens its popup; clicking a marker highlights and scrolls to its card. For a larger dataset, the natural next step is PostGIS + a bounding-box query instead of fetching the full table.
+
+**AI-assisted valuation, pre-computed by design.**
+Rather than calling a paid LLM API on every page load (which would break the 0 CZK budget and add latency), each listing's `deal_rating` and `ai_summary` were generated once, offline, with Claude 3.5 Sonnet acting as a market analyst over comparable listings, then stored as plain columns. This is a realistic pattern for production: expensive AI inference runs in a batch/offline pipeline, and the frontend only ever reads cheap, pre-computed results.
+
+**CI/CD via Vercel.**
+The project has zero build step, so Vercel's static deployment is used as-is: every push to the connected GitHub branch triggers an automatic redeploy, giving instant preview URLs for pull requests and a stable production URL for `main` — a minimal but real CI/CD loop appropriate for a project this size.
+
+**Client-side filtering, not re-fetching.**
+The full listing set is fetched once on load; search, district, price-range, and sort filters all run client-side against the in-memory array. This keeps the UI instant and avoids unnecessary round-trips for a dataset of this scale, while remaining a straightforward place to swap in server-side filtering (`.eq()`, `.gte()`, `.ilike()` on the Supabase query builder) if the dataset grows.
+
+---
+
+## 6. Possible Extensions
+
+- Replace static seed data with a scraper/ingestion job writing into the same schema.
+- Add authentication (Supabase Auth) and a saved-favourites feature per user.
+- Add a `properties_history` table + a price-trend sparkline per listing.
+- Move from client-side to PostgREST-level filtering (`?district=eq.Karlín`) for larger datasets.
+- Swap pre-generated AI summaries for a live Claude API call behind a serverless function, with response caching.
+
+---
+
+## License
+
+MIT — feel free to fork and adapt for your own portfolio.

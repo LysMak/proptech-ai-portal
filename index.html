@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PropTech AI Analytics — Praha</title>
+<meta name="description" content="AI-powered analytics portal for Prague residential real estate. Interactive map, market comparison and AI valuation for every listing." />
+
+<!-- Leaflet.js (map) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root {
+    --color-bg: #0f1115;
+    --color-panel: #161923;
+    --color-panel-alt: #1d212e;
+    --color-border: #2a2f3d;
+    --color-text: #eef0f4;
+    --color-text-dim: #9aa1b2;
+    --color-primary: #4f8dfd;
+    --color-primary-dim: #2f4d85;
+    --color-good: #34c77b;
+    --color-good-bg: rgba(52, 199, 123, 0.14);
+    --color-bad: #f2555a;
+    --color-bad-bg: rgba(242, 85, 90, 0.14);
+    --color-neutral: #c9a94d;
+    --color-neutral-bg: rgba(201, 169, 77, 0.14);
+    --radius: 14px;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    font-size: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  a { color: inherit; }
+
+  /* ---------- Header ---------- */
+  header.app-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 24px;
+    background: var(--color-panel);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand h1 {
+    font-size: 1.25rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .brand span.tag {
+    font-size: 0.72rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--color-primary-dim);
+    color: #cfe0ff;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .brand p {
+    margin: 2px 0 0;
+    font-size: 0.82rem;
+    color: var(--color-text-dim);
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    text-align: right;
+  }
+
+  .stat .value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .stat .label {
+    font-size: 0.7rem;
+    color: var(--color-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ---------- Filters ---------- */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 24px;
+    background: var(--color-panel-alt);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .filters input,
+  .filters select {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    outline: none;
+    min-width: 0;
+  }
+
+  .filters input:focus,
+  .filters select:focus {
+    border-color: var(--color-primary);
+  }
+
+  .filters .field-search { flex: 1 1 220px; }
+  .filters .field-district { flex: 0 1 170px; }
+  .filters .field-price { flex: 0 1 150px; }
+  .filters .field-sort { flex: 0 1 190px; }
+
+  .filters button.reset {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-dim);
+    padding: 9px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .filters button.reset:hover {
+    border-color: var(--color-primary);
+    color: var(--color-text);
+  }
+
+  /* ---------- Layout ---------- */
+  main.layout {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    height: calc(100vh - 128px);
+  }
+
+  #map {
+    height: 100%;
+    width: 100%;
+    background: #10131a;
+  }
+
+  .list-panel {
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-left: 1px solid var(--color-border);
+  }
+
+  .list-panel .empty-state,
+  .list-panel .loading-state,
+  .list-panel .error-state {
+    color: var(--color-text-dim);
+    text-align: center;
+    padding: 40px 16px;
+    font-size: 0.92rem;
+  }
+
+  .error-state { color: var(--color-bad); }
+
+  .result-count {
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+    padding: 0 4px;
+  }
+
+  /* ---------- Card ---------- */
+  .card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+
+  .card.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .card-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  .district-badge {
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--color-primary-dim);
+    color: #cfe0ff;
+    white-space: nowrap;
+  }
+
+  .card-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 8px 0 4px;
+    flex-wrap: wrap;
+  }
+
+  .card-price {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .card-meta {
+    font-size: 0.82rem;
+    color: var(--color-text-dim);
+  }
+
+  .deal-badge {
+    display: inline-block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin: 4px 0 10px;
+  }
+
+  .deal-good { background: var(--color-good-bg); color: var(--color-good); }
+  .deal-bad { background: var(--color-bad-bg); color: var(--color-bad); }
+  .deal-neutral { background: var(--color-neutral-bg); color: var(--color-neutral); }
+
+  .ai-summary {
+    display: flex;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--color-text-dim);
+    line-height: 1.45;
+    border-top: 1px solid var(--color-border);
+    padding-top: 10px;
+  }
+
+  .ai-summary .ai-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  /* ---------- Leaflet marker ---------- */
+  .price-pin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0f1115;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    border: 2px solid rgba(15,17,21,0.5);
+  }
+  .price-pin.deal-good { background: var(--color-good); color: #06301a; }
+  .price-pin.deal-bad { background: var(--color-bad); color: #380608; }
+  .price-pin.deal-neutral { background: var(--color-neutral); color: #332a06; }
+
+  .price-pin.active-pin {
+    outline: 3px solid #fff;
+  }
+
+  .leaflet-popup-content-wrapper {
+    background: var(--color-panel);
+    color: var(--color-text);
+    border-radius: 10px;
+  }
+  .leaflet-popup-tip { background: var(--color-panel); }
+  .popup-title { font-weight: 700; margin: 0 0 4px; font-size: 0.9rem; }
+  .popup-price { font-size: 0.85rem; color: var(--color-text-dim); }
+
+  /* ---------- Footer ---------- */
+  footer.app-footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-text-dim);
+    padding: 10px;
+    background: var(--color-panel-alt);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    main.layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: 42vh 1fr;
+      height: auto;
+    }
+    #map { height: 42vh; }
+    .list-panel {
+      border-left: none;
+      border-top: 1px solid var(--color-border);
+      height: auto;
+      max-height: 58vh;
+    }
+    .stats-bar { justify-content: flex-start; width: 100%; }
+    .stat { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <div>
+      <h1>PropTech AI Analytics <span class="tag">Praha</span></h1>
+      <p>Real-time market intelligence for Prague residential listings</p>
+    </div>
+  </div>
+  <div class="stats-bar" id="statsBar">
+    <div class="stat">
+      <div class="value" id="statCount">—</div>
+      <div class="label">Nabídek</div>
+    </div>
+    <div class="stat">
+      <div class="value" id="statAvgPrice">—</div>
+      <div class="label">Ø Kč / m²</div>
+    </div>
+    <div class="stat">
+      <div class="value" id="statGoodDeals">—</div>
+      <div class="label">Pod tržní cenou</div>
+    </div>
+  </div>
+</header>
+
+<div class="filters">
+  <input
+    type="text"
+    id="filterSearch"
+    class="field-search"
+    placeholder="Hledat podle názvu nebo ulice…"
+    autocomplete="off"
+  />
+  <select id="filterDistrict" class="field-district">
+    <option value="">Všechny čtvrti</option>
+  </select>
+  <select id="filterPrice" class="field-price">
+    <option value="">Jakýkoli rozpočet</option>
+    <option value="0-5000000">do 5 mil. Kč</option>
+    <option value="5000000-8000000">5 - 8 mil. Kč</option>
+    <option value="8000000-12000000">8 - 12 mil. Kč</option>
+    <option value="12000000-999999999">12 mil. Kč +</option>
+  </select>
+  <select id="filterSort" class="field-sort">
+    <option value="default">Řadit: výchozí</option>
+    <option value="price-asc">Cena: od nejnižší</option>
+    <option value="price-desc">Cena: od nejvyšší</option>
+    <option value="ppsqm-asc">Kč/m²: od nejnižší</option>
+    <option value="ppsqm-desc">Kč/m²: od nejvyšší</option>
+  </select>
+  <button class="reset" id="filterReset" type="button">Reset filtrů</button>
+</div>
+
+<main class="layout">
+  <div id="map"></div>
+  <div class="list-panel">
+    <div class="result-count" id="resultCount"></div>
+    <div id="cardsContainer">
+      <div class="loading-state">Načítám nabídky ze Supabase…</div>
+    </div>
+  </div>
+</main>
+
+<footer class="app-footer">
+  PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes
+</footer>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------
+  let allProperties = [];   // raw data from Supabase
+  let activeId = null;      // currently selected property id
+  const markersById = new Map();
+
+  // ------------------------------------------------------------
+  // Supabase client
+  // ------------------------------------------------------------
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ------------------------------------------------------------
+  // Leaflet map setup — centered on Karlín, Prague
+  // ------------------------------------------------------------
+  const PRAGUE_KARLIN = [50.0955, 14.4487];
+  const map = L.map("map", { zoomControl: true }).setView(PRAGUE_KARLIN, 13);
+
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd",
+    maxZoom: 19,
+  }).addTo(map);
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  function formatCzk(number) {
+    return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(number) + " Kč";
+  }
+
+  function formatPriceShort(price) {
+    const millions = Math.round((price / 1000000) * 100) / 100;
+    return millions + "M Kč";
+  }
+
+  function dealClass(dealRating) {
+    if (/-\s?\d/.test(dealRating) || /Skvělá|Pod tržní/i.test(dealRating)) return "deal-good";
+    if (/\+\s?\d/.test(dealRating) || /Nadprůměrná/i.test(dealRating)) return "deal-bad";
+    return "deal-neutral";
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ------------------------------------------------------------
+  // Fetch data from Supabase
+  // ------------------------------------------------------------
+  async function loadProperties() {
+    const container = document.getElementById("cardsContainer");
+    try {
+      const { data, error } = await sb
+        .from("properties")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        container.innerHTML =
+          '<div class="empty-state">Zatím žádné nabídky. Zkontrolujte, že jste spustili schema.sql v Supabase.</div>';
+        return;
+      }
+
+      allProperties = data;
+      populateDistrictFilter(data);
+      renderMarkers(data);
+      applyFiltersAndRender();
+    } catch (err) {
+      console.error("Supabase fetch failed:", err);
+      container.innerHTML =
+        '<div class="error-state">Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js.<br><small>' +
+        escapeHtml(err.message || String(err)) +
+        "</small></div>";
+    }
+  }
+
+  function populateDistrictFilter(data) {
+    const select = document.getElementById("filterDistrict");
+    const districts = [...new Set(data.map((p) => p.district))].sort();
+    districts.forEach((d) => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      select.appendChild(opt);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Map markers
+  // ------------------------------------------------------------
+  function renderMarkers(data) {
+    data.forEach((property) => {
+      const cls = dealClass(property.deal_rating);
+      const icon = L.divIcon({
+        className: "",
+        html: `<div class="price-pin ${cls}" data-id="${property.id}">${formatPriceShort(property.price)}</div>`,
+        iconSize: null,
+      });
+
+      const marker = L.marker([property.lat, property.lng], { icon }).addTo(map);
+      marker.bindPopup(
+        `<div class="popup-title">${escapeHtml(property.title)}</div>` +
+          `<div class="popup-price">${formatCzk(property.price)} · ${property.area_sqm} m²</div>`
+      );
+      marker.on("click", () => selectProperty(property.id, { flyTo: false }));
+
+      markersById.set(property.id, marker);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Filtering + sorting
+  // ------------------------------------------------------------
+  function getFilteredProperties() {
+    const search = document.getElementById("filterSearch").value.trim().toLowerCase();
+    const district = document.getElementById("filterDistrict").value;
+    const priceRange = document.getElementById("filterPrice").value;
+    const sort = document.getElementById("filterSort").value;
+
+    let result = allProperties.filter((p) => {
+      const matchesSearch = !search || p.title.toLowerCase().includes(search);
+      const matchesDistrict = !district || p.district === district;
+
+      let matchesPrice = true;
+      if (priceRange) {
+        const [min, max] = priceRange.split("-").map(Number);
+        matchesPrice = p.price >= min && p.price <= max;
+      }
+
+      return matchesSearch && matchesDistrict && matchesPrice;
+    });
+
+    switch (sort) {
+      case "price-asc":
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case "price-desc":
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case "ppsqm-asc":
+        result.sort((a, b) => a.price_per_sqm - b.price_per_sqm);
+        break;
+      case "ppsqm-desc":
+        result.sort((a, b) => b.price_per_sqm - a.price_per_sqm);
+        break;
+      default:
+        break;
+    }
+
+    return result;
+  }
+
+  function applyFiltersAndRender() {
+    const filtered = getFilteredProperties();
+    renderCards(filtered);
+    updateStats(filtered);
+    updateMarkerVisibility(filtered);
+  }
+
+  function updateMarkerVisibility(filtered) {
+    const visibleIds = new Set(filtered.map((p) => p.id));
+    markersById.forEach((marker, id) => {
+      const shouldShow = visibleIds.has(id);
+      const el = marker.getElement();
+      if (el) el.style.display = shouldShow ? "" : "none";
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Cards rendering
+  // ------------------------------------------------------------
+  function renderCards(properties) {
+    const container = document.getElementById("cardsContainer");
+    const countEl = document.getElementById("resultCount");
+
+    countEl.textContent = `${properties.length} ${properties.length === 1 ? "nabídka" : "nabídek"}`;
+
+    if (properties.length === 0) {
+      container.innerHTML = '<div class="empty-state">Žádné nabídky neodpovídají zvoleným filtrům.</div>';
+      return;
+    }
+
+    container.innerHTML = properties
+      .map((p) => {
+        const cls = dealClass(p.deal_rating);
+        const active = p.id === activeId ? "active" : "";
+        return `
+          <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(p.title)}">
+            <div class="card-top">
+              <h3 class="card-title">${escapeHtml(p.title)}</h3>
+              <span class="district-badge">${escapeHtml(p.district)}</span>
+            </div>
+            <div class="card-price-row">
+              <span class="card-price">${formatCzk(p.price)}</span>
+              <span class="card-meta">${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
+            </div>
+            <span class="deal-badge ${cls}">${escapeHtml(p.deal_rating)}</span>
+            <div class="ai-summary">
+              <span class="ai-icon">🤖</span>
+              <span>${escapeHtml(p.ai_summary)}</span>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+
+    container.querySelectorAll(".card").forEach((card) => {
+      const id = Number(card.dataset.id);
+      card.addEventListener("click", () => selectProperty(id, { flyTo: true }));
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          selectProperty(id, { flyTo: true });
+        }
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Selection — links a card to its map marker
+  // ------------------------------------------------------------
+  function selectProperty(id, { flyTo }) {
+    activeId = id;
+    const property = allProperties.find((p) => p.id === id);
+    if (!property) return;
+
+    document.querySelectorAll(".card").forEach((card) => {
+      card.classList.toggle("active", Number(card.dataset.id) === id);
+    });
+
+    document.querySelectorAll(".price-pin").forEach((pin) => {
+      pin.classList.toggle("active-pin", Number(pin.dataset.id) === id);
+    });
+
+    if (flyTo) {
+      map.flyTo([property.lat, property.lng], 15, { duration: 0.6 });
+    }
+
+    const marker = markersById.get(id);
+    if (marker) marker.openPopup();
+
+    const cardEl = document.querySelector(`.card[data-id="${id}"]`);
+    if (cardEl) cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  // ------------------------------------------------------------
+  // Stats bar
+  // ------------------------------------------------------------
+  function updateStats(properties) {
+    document.getElementById("statCount").textContent = properties.length;
+
+    if (properties.length === 0) {
+      document.getElementById("statAvgPrice").textContent = "—";
+      document.getElementById("statGoodDeals").textContent = "—";
+      return;
+    }
+
+    const avgPpSqm =
+      properties.reduce((sum, p) => sum + Number(p.price_per_sqm), 0) / properties.length;
+    document.getElementById("statAvgPrice").textContent = Math.round(avgPpSqm).toLocaleString("cs-CZ");
+
+    const goodDeals = properties.filter((p) => dealClass(p.deal_rating) === "deal-good").length;
+    document.getElementById("statGoodDeals").textContent = goodDeals;
+  }
+
+  // ------------------------------------------------------------
+  // Filter event wiring
+  // ------------------------------------------------------------
+  document.getElementById("filterSearch").addEventListener("input", applyFiltersAndRender);
+  document.getElementById("filterDistrict").addEventListener("change", applyFiltersAndRender);
+  document.getElementById("filterPrice").addEventListener("change", applyFiltersAndRender);
+  document.getElementById("filterSort").addEventListener("change", applyFiltersAndRender);
+  document.getElementById("filterReset").addEventListener("click", () => {
+    document.getElementById("filterSearch").value = "";
+    document.getElementById("filterDistrict").value = "";
+    document.getElementById("filterPrice").value = "";
+    document.getElementById("filterSort").value = "default";
+    applyFiltersAndRender();
+  });
+
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
+  loadProperties();
+})();
+</script>
+</body>
+</html>
