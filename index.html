@@ -294,6 +294,57 @@
     color: var(--color-text);
   }
 
+  /* ---------- Deal-rating (color) filter ---------- */
+  .deal-filter {
+    display: flex;
+    gap: 8px;
+  }
+
+  .deal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 13px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text-dim);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    opacity: 0.5;
+    transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .deal-chip:hover { opacity: 0.8; }
+
+  .deal-chip-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .dot-good { background: var(--color-good); }
+  .dot-neutral { background: var(--color-neutral); }
+  .dot-bad { background: var(--color-bad); }
+
+  .deal-chip.active { opacity: 1; }
+  .deal-chip.active[data-deal-filter="deal-good"] {
+    border-color: var(--color-good);
+    background: var(--color-good-bg);
+    color: var(--color-good);
+  }
+  .deal-chip.active[data-deal-filter="deal-neutral"] {
+    border-color: var(--color-neutral);
+    background: var(--color-neutral-bg);
+    color: var(--color-neutral);
+  }
+  .deal-chip.active[data-deal-filter="deal-bad"] {
+    border-color: var(--color-bad);
+    background: var(--color-bad-bg);
+    color: var(--color-bad);
+  }
+
   .viewport-hint {
     font-size: 0.76rem;
     color: var(--color-text-dim);
@@ -616,6 +667,17 @@
     <option value="ppsqm-asc" data-i18n="sortPpsqmAsc">Kč/m²: od nejnižší</option>
     <option value="ppsqm-desc" data-i18n="sortPpsqmDesc">Kč/m²: od nejvyšší</option>
   </select>
+  <div class="deal-filter" id="dealFilter">
+    <button type="button" class="deal-chip active" data-deal-filter="deal-good" aria-pressed="true">
+      <span class="deal-chip-dot dot-good"></span><span data-i18n="belowMarket">Pod tržní cenou</span>
+    </button>
+    <button type="button" class="deal-chip active" data-deal-filter="deal-neutral" aria-pressed="true">
+      <span class="deal-chip-dot dot-neutral"></span><span data-i18n="marketPrice">Tržní cena</span>
+    </button>
+    <button type="button" class="deal-chip active" data-deal-filter="deal-bad" aria-pressed="true">
+      <span class="deal-chip-dot dot-bad"></span><span data-i18n="aboveMarket">Nadprůměrná cena</span>
+    </button>
+  </div>
   <button class="reset" id="filterReset" type="button" data-i18n="resetFilters">Reset filtrů</button>
 </div>
 <div class="viewport-hint" id="viewportHint" data-i18n="viewportHint">📍 Zobrazeny jsou nabídky v aktuálním výřezu mapy — posuňte nebo oddalte mapu pro více výsledků</div>
@@ -659,6 +721,7 @@
   let allProperties = [];   // properties currently loaded for the visible map viewport
   let activeId = null;      // currently selected property id
   let districtsSeen = new Set(); // district names seen so far, to build the filter dropdown incrementally
+  let activeDealFilters = new Set(["deal-good", "deal-neutral", "deal-bad"]); // which colors to show
   let fetchInFlight = false;
   const markersById = new Map();
   let markersLayer;         // set once the map is initialized below
@@ -980,7 +1043,9 @@
         matchesPrice = p.price >= min && p.price <= max;
       }
 
-      return matchesSearch && matchesDistrict && matchesPrice;
+      const matchesDeal = activeDealFilters.has(dealClass(p.deal_rating));
+
+      return matchesSearch && matchesDistrict && matchesPrice && matchesDeal;
     });
 
     switch (sort) {
@@ -1126,11 +1191,32 @@
   document.getElementById("filterDistrict").addEventListener("change", applyFiltersAndRender);
   document.getElementById("filterPrice").addEventListener("change", applyFiltersAndRender);
   document.getElementById("filterSort").addEventListener("change", applyFiltersAndRender);
+
+  document.querySelectorAll(".deal-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const key = chip.dataset.dealFilter;
+      if (activeDealFilters.has(key)) {
+        activeDealFilters.delete(key);
+      } else {
+        activeDealFilters.add(key);
+      }
+      const isActive = activeDealFilters.has(key);
+      chip.classList.toggle("active", isActive);
+      chip.setAttribute("aria-pressed", String(isActive));
+      applyFiltersAndRender();
+    });
+  });
+
   document.getElementById("filterReset").addEventListener("click", () => {
     document.getElementById("filterSearch").value = "";
     document.getElementById("filterDistrict").value = "";
     document.getElementById("filterPrice").value = "";
     document.getElementById("filterSort").value = "default";
+    activeDealFilters = new Set(["deal-good", "deal-neutral", "deal-bad"]);
+    document.querySelectorAll(".deal-chip").forEach((chip) => {
+      chip.classList.add("active");
+      chip.setAttribute("aria-pressed", "true");
+    });
     applyFiltersAndRender();
   });
 
