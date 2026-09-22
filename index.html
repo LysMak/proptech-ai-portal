@@ -966,8 +966,11 @@
     // would cover a big chunk of it, so collapse it to an icon there
     // (Leaflet expands it back on tap/hover either way).
     const isNarrow = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+    // topleft (stacking under the zoom control), not topright — the
+    // settings panel drops down from the top-right and would otherwise
+    // sit on top of this control while open.
     mapLayersControl = L.control
-      .layers(labels, null, { position: "topright", collapsed: isNarrow })
+      .layers(labels, null, { position: "topleft", collapsed: isNarrow })
       .addTo(map);
   }
   // Created for real inside applyTranslations() near the bottom of this
