@@ -14,5 +14,5 @@
 //     - "anon public" key   -> SUPABASE_ANON_KEY
 // ============================================================
 
-const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+const SUPABASE_URL = "https://ntntugrvwdecmnacniwn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50bnR1Z3J2d2RlY21uYWNuaXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxMDk3NzAsImV4cCI6MjEwNTY4NTc3MH0.CpXdWY3SHBcALmpBTDCHbVuaTDu0hGZujTtbZwQ1vLA";
