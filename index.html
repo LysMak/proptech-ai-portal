@@ -595,16 +595,6 @@
   }
   .leaflet-control-layers-selector { margin-right: 6px; }
 
-  /* Custom collapsed-state icon (🎨/🌙 reflecting the active basemap)
-     instead of Leaflet's generic stacked-layers sprite. */
-  .leaflet-control-layers-toggle.map-theme-toggle-icon {
-    background-image: none !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-  }
-
   /* ---------- Footer ---------- */
   footer.app-footer {
     text-align: center;
@@ -965,14 +955,7 @@
   } catch (e) {
     /* localStorage unavailable (private mode etc.) — fall back to default */
   }
-  let currentMapTheme = savedTheme;
   (savedTheme === "dark" ? darkLayer : colorLayer).addTo(map);
-
-  function updateMapToggleIcon() {
-    if (!mapLayersControl) return;
-    const toggleLink = mapLayersControl.getContainer().querySelector(".leaflet-control-layers-toggle");
-    if (toggleLink) toggleLink.textContent = currentMapTheme === "dark" ? "🌙" : "🎨";
-  }
 
   function createMapLayersControl() {
     if (mapLayersControl) map.removeControl(mapLayersControl);
@@ -1000,7 +983,6 @@
     // immediately re-expanding it right after.
     const toggleLink = mapLayersControl.getContainer().querySelector(".leaflet-control-layers-toggle");
     if (toggleLink) {
-      toggleLink.classList.add("map-theme-toggle-icon");
       toggleLink.addEventListener(
         "click",
         (e) => {
@@ -1014,22 +996,17 @@
         true
       );
     }
-    // Replace Leaflet's generic "layers" icon with one that shows which
-    // basemap is currently active, instead of always looking the same.
-    updateMapToggleIcon();
   }
   // Created for real inside applyTranslations() near the bottom of this
   // script, once the i18n dictionary and helper functions it needs exist.
 
   map.on("baselayerchange", (e) => {
     const theme = e.name === t("mapDark") ? "dark" : "color";
-    currentMapTheme = theme;
     try {
       localStorage.setItem("proptech_map_theme", theme);
     } catch (e2) {
       /* ignore — theme just won't persist across reloads */
     }
-    updateMapToggleIcon();
   });
 
   markersLayer = L.layerGroup().addTo(map);
