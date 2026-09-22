@@ -6,6 +6,17 @@
 <title>PropTech AI Analytics — Praha</title>
 <meta name="description" content="AI-powered analytics portal for Prague residential real estate. Interactive map, market comparison and AI valuation for every listing." />
 
+<!-- Favicon: simple inline SVG pin, no separate asset file needed -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234f8dfd' d='M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8Z'/%3E%3Ccircle cx='12' cy='10' r='3.2' fill='%230f1115'/%3E%3C/svg%3E" />
+
+<!-- Social link previews -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="PropTech AI Analytics — Praha" />
+<meta property="og:description" content="AI-powered analytics portal for Prague residential real estate — interactive map, market comparison and AI valuation for 50 listings across 20 districts." />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="PropTech AI Analytics — Praha" />
+<meta name="twitter:description" content="AI-powered analytics portal for Prague residential real estate — interactive map, market comparison and AI valuation for 50 listings across 20 districts." />
+
 <!-- Leaflet.js (map) -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -189,10 +200,18 @@
     flex-direction: column;
     gap: 12px;
     border-left: 1px solid var(--color-border);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
   }
+  .list-panel::-webkit-scrollbar { width: 8px; }
+  .list-panel::-webkit-scrollbar-track { background: transparent; }
+  .list-panel::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+  }
+  .list-panel::-webkit-scrollbar-thumb:hover { background: var(--color-primary-dim); }
 
   .list-panel .empty-state,
-  .list-panel .loading-state,
   .list-panel .error-state {
     color: var(--color-text-dim);
     text-align: center;
@@ -202,6 +221,29 @@
 
   .error-state { color: var(--color-bad); }
 
+  /* ---------- Loading skeleton ---------- */
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 0.85; }
+  }
+  .skeleton-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--color-panel-alt);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  .skeleton-line + .skeleton-line { margin-top: 10px; }
+  .skeleton-line.w-60 { width: 60%; }
+  .skeleton-line.w-40 { width: 40%; }
+  .skeleton-line.w-90 { width: 90%; }
+  .skeleton-line.h-badge { height: 20px; width: 45%; border-radius: 999px; margin-top: 12px; }
+
   .result-count {
     font-size: 0.8rem;
     color: var(--color-text-dim);
@@ -209,6 +251,10 @@
   }
 
   /* ---------- Card ---------- */
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   .card {
     background: var(--color-panel);
     border: 1px solid var(--color-border);
@@ -216,6 +262,7 @@
     padding: 16px;
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.15s ease;
+    animation: card-in 0.28s ease backwards;
   }
 
   .card:hover {
@@ -434,7 +481,21 @@
   <div class="list-panel">
     <div class="result-count" id="resultCount"></div>
     <div id="cardsContainer">
-      <div class="loading-state">Načítám nabídky ze Supabase…</div>
+      <div class="skeleton-card">
+        <div class="skeleton-line w-90"></div>
+        <div class="skeleton-line w-40"></div>
+        <div class="skeleton-line h-badge"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line w-60"></div>
+        <div class="skeleton-line w-90"></div>
+        <div class="skeleton-line h-badge"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-line w-90"></div>
+        <div class="skeleton-line w-40"></div>
+        <div class="skeleton-line h-badge"></div>
+      </div>
     </div>
   </div>
 </main>
@@ -710,11 +771,12 @@
     }
 
     container.innerHTML = properties
-      .map((p) => {
+      .map((p, i) => {
         const cls = dealClass(p.deal_rating);
         const active = p.id === activeId ? "active" : "";
+        const delay = Math.min(i, 12) * 0.035;
         return `
-          <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(p.title)}">
+          <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(p.title)}" style="animation-delay: ${delay}s">
             <div class="card-top">
               <h3 class="card-title">${escapeHtml(p.title)}</h3>
               <span class="district-badge">${escapeHtml(p.district)}</span>

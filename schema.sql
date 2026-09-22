@@ -104,16 +104,18 @@ comment on function public.properties_in_bbox is
     'Returns listings whose location falls within the given lng/lat bounding box, using the GIST spatial index.';
 
 -- --------------------------------------------------------------
--- 6. Seed data — 10 realistic Prague listings
---    (Karlín, Vinohrady, Žižkov, Smíchov)
+-- 6. Seed data — 50 realistic Prague listings across 20 districts
 --
 -- Coordinates point at real streets in each district.
--- Prices are modelled on 2024/2025 Prague market averages:
+-- Prices are modelled on 2024/2025 Prague market averages, highest
+-- in the historical center and lowest in outer residential districts.
+-- --------------------------------------------------------------
+
+-- 6a. Original 10 listings (Karlín, Vinohrady, Žižkov, Smíchov)
 --   Karlín    ~155 000 Kč/m²
 --   Vinohrady ~158 000 Kč/m²
 --   Žižkov    ~118 000 Kč/m²
 --   Smíchov   ~132 000 Kč/m²
--- --------------------------------------------------------------
 insert into public.properties
     (title, district, price, area_sqm, lat, lng, deal_rating, ai_summary)
 values
@@ -206,6 +208,374 @@ values
     50.0680, 14.3980,
     'Pod tržní cenou (-7 %)',
     'Model identifikoval nabídku jako podhodnocenou o 7 % vůči srovnatelným bytům v okolí Plzeňské. Prostorná dispozice s balkonem a dobrá dostupnost MHD řadí byt mezi TOP tipy týdne pro rodiny s dětmi.'
+);
+
+-- 6b. Additional 40 listings spread across the rest of Prague
+--     (Staré Město, Nové Město, Malá Strana, Nusle, Vyšehrad, Podolí,
+--      Braník, Krč, Košíře, Dejvice, Bubeneč, Břevnov, Holešovice,
+--      Letná, Libeň, Vysočany) — 20 districts and 50 listings total.
+insert into public.properties
+    (title, district, price, area_sqm, lat, lng, deal_rating, ai_summary)
+values
+(
+    'Cihlový byt 5+kk mezonet, Kožná',
+    'Staré Město',
+    32250000,
+    142.2,
+    50.0848, 14.4201,
+    'Nadprůměrná cena (+8 %)',
+    'Nabídka je o 8 % nad průměrnou cenou v lokalitě Staré Město (210 000 Kč/m²). Lokalita těží z blízkosti stanice metra A "Staroměstská". I přes vyšší cenu zůstává v lokalitě silná poptávka.'
+),
+(
+    'Byt Garsoniéra v klidné lokalitě, Dlouhá',
+    'Staré Město',
+    5205000,
+    24.3,
+    50.0867, 14.417,
+    'Nadprůměrná cena (+2 %)',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Staré Město (210 000 Kč/m²). Lokalita těží z blízkosti stanice metra A "Staroměstská". Model neočekává výrazný pohyb ceny v následujících měsících.'
+),
+(
+    'Světlý byt 4+kk po rekonstrukci, Kožná',
+    'Staré Město',
+    21265000,
+    92.9,
+    50.0846, 14.4177,
+    'Nadprůměrná cena (+9 %)',
+    'Nabídka je o 9 % nad průměrnou cenou v lokalitě Staré Město (210 000 Kč/m²). Lokalita těží z blízkosti stanice metra A "Staroměstská". Prémiová cena je částečně vyvážena kvalitou provedení a vybavením.'
+),
+(
+    'Prostorný byt 5+kk mezonet, Ječná',
+    'Nové Město',
+    23850000,
+    134.0,
+    50.0809, 14.4224,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Nové Město (178 000 Kč/m²). Lokalita těží z blízkosti stanic metra "Můstek" a "Národní třída". Model neočekává výrazný pohyb ceny v následujících měsících.'
+),
+(
+    'Byt 1+1 s terasou, Štěpánská',
+    'Nové Město',
+    6745000,
+    37.9,
+    50.0773, 14.4253,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Nové Město (178 000 Kč/m²). Lokalita těží z blízkosti stanic metra "Můstek" a "Národní třída". Cena je adekvátní vzhledem k lokalitě a stavu nemovitosti.'
+),
+(
+    'Novostavba, byt 1+kk, Sokolská',
+    'Nové Město',
+    6070000,
+    32.8,
+    50.0829, 14.4249,
+    'Nadprůměrná cena (+4 %)',
+    'Nabídka je o 4 % nad průměrnou cenou v lokalitě Nové Město (178 000 Kč/m²). Lokalita těží z blízkosti stanic metra "Můstek" a "Národní třída". Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Novostavba, byt 4+kk, Míšeňská',
+    'Malá Strana',
+    18840000,
+    85.1,
+    50.0903, 14.406,
+    'Nadprůměrná cena (+8 %)',
+    'Nabídka je o 8 % nad průměrnou cenou v lokalitě Malá Strana (205 000 Kč/m²). Lokalita těží z blízkosti stanice metra A "Malostranská". I přes vyšší cenu zůstává v lokalitě silná poptávka.'
+),
+(
+    'Byt 4+1 v klidné lokalitě, Nerudova',
+    'Malá Strana',
+    17810000,
+    102.2,
+    50.0886, 14.4038,
+    'Skvělá nabídka (-15 %)',
+    'AI model porovnal 61 srovnatelných nabídek v lokalitě Malá Strana za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 15 % oproti průměru 205 000 Kč/m². Lokalita těží z blízkosti stanice metra A "Malostranská". Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Byt 3+kk v klidné lokalitě, Táborská',
+    'Nusle',
+    8395000,
+    68.8,
+    50.0667, 14.4403,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Nusle (122 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Vyšehrad" a Nuselského mostu. Cena je adekvátní vzhledem k lokalitě a stavu nemovitosti.'
+),
+(
+    'Byt 2+kk s balkonem, Táborská',
+    'Nusle',
+    5360000,
+    50.5,
+    50.0656, 14.4402,
+    'Skvělá nabídka (-13 %)',
+    'AI model porovnal 62 srovnatelných nabídek v lokalitě Nusle za posledních 45 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 13 % oproti průměru 122 000 Kč/m². Lokalita těží z blízkosti stanice metra C "Vyšehrad" a Nuselského mostu. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Novostavba, byt 4+kk, Táborská',
+    'Nusle',
+    14195000,
+    103.9,
+    50.0639, 14.4381,
+    'Nadprůměrná cena (+12 %)',
+    'Nabídka je o 12 % nad průměrnou cenou v lokalitě Nusle (122 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Vyšehrad" a Nuselského mostu. I přes vyšší cenu zůstává v lokalitě silná poptávka.'
+),
+(
+    'Byt 3+1 v klidné lokalitě, Neklanova',
+    'Vyšehrad',
+    11275000,
+    81.9,
+    50.0643, 14.4185,
+    'Pod tržní cenou (-7 %)',
+    'AI model porovnal 35 srovnatelných nabídek v lokalitě Vyšehrad za posledních 45 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 7 % oproti průměru 148 000 Kč/m². Lokalita těží z blízkosti pevnosti a parku Vyšehrad. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Útulný byt 1+kk, Neklanova',
+    'Vyšehrad',
+    4610000,
+    29.4,
+    50.0626, 14.4155,
+    'Nadprůměrná cena (+6 %)',
+    'Nabídka je o 6 % nad průměrnou cenou v lokalitě Vyšehrad (148 000 Kč/m²). Lokalita těží z blízkosti pevnosti a parku Vyšehrad. Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Byt 1+kk s balkonem, Na Podkovce',
+    'Podolí',
+    4930000,
+    35.1,
+    50.0562, 14.4158,
+    'Nadprůměrná cena (+4 %)',
+    'Nabídka je o 4 % nad průměrnou cenou v lokalitě Podolí (135 000 Kč/m²). Lokalita těží z blízkosti podolského nábřeží a plaveckého stadionu. Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Světlý byt 5+kk mezonet po rekonstrukci, Podolské nábřeží',
+    'Podolí',
+    18925000,
+    140.2,
+    50.0586, 14.4149,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Podolí (135 000 Kč/m²). Lokalita těží z blízkosti podolského nábřeží a plaveckého stadionu. Nabídka odpovídá standardnímu tržnímu standardu v této části Prahy.'
+),
+(
+    'Zrekonstruovaný byt 3+1, U Ledáren',
+    'Braník',
+    7420000,
+    72.0,
+    50.0357, 14.4178,
+    'Pod tržní cenou (-8 %)',
+    'AI model porovnal 34 srovnatelných nabídek v lokalitě Braník za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 8 % oproti průměru 112 000 Kč/m². Lokalita těží z blízkosti klidné okrajové části při řece. Vzhledem k lokalitě a ceně jde o nadprůměrně likvidní investici.'
+),
+(
+    'Cihlový byt 3+kk, Branická',
+    'Braník',
+    6835000,
+    74.4,
+    50.0318, 14.4134,
+    'Skvělá nabídka (-18 %)',
+    'AI model porovnal 36 srovnatelných nabídek v lokalitě Braník za posledních 90 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 18 % oproti průměru 112 000 Kč/m². Lokalita těží z blízkosti klidné okrajové části při řece. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Světlý byt 2+1 po rekonstrukci, Krčská',
+    'Krč',
+    5085000,
+    51.0,
+    50.0358, 14.4436,
+    'Pod tržní cenou (-5 %)',
+    'AI model porovnal 34 srovnatelných nabídek v lokalitě Krč za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 5 % oproti průměru 105 000 Kč/m². Lokalita těží z blízkosti stanice metra C "Kačerov" a Krčského lesa. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Prostorný byt Garsoniéra, Krčská',
+    'Krč',
+    3330000,
+    31.7,
+    50.0326, 14.4398,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Krč (105 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Kačerov" a Krčského lesa. Model neočekává výrazný pohyb ceny v následujících měsících.'
+),
+(
+    'Novostavba, byt 3+1, Choceradská',
+    'Krč',
+    7100000,
+    65.0,
+    50.0367, 14.4429,
+    'Nadprůměrná cena (+4 %)',
+    'Nabídka je o 4 % nad průměrnou cenou v lokalitě Krč (105 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Kačerov" a Krčského lesa. Prémiová cena je částečně vyvážena kvalitou provedení a vybavením.'
+),
+(
+    'Zrekonstruovaný byt 1+1, Plzeňská',
+    'Košíře',
+    2965000,
+    31.9,
+    50.0686, 14.3724,
+    'Skvělá nabídka (-14 %)',
+    'AI model porovnal 48 srovnatelných nabídek v lokalitě Košíře za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 14 % oproti průměru 108 000 Kč/m². Lokalita těží z blízkosti tramvajové trati směr centrum. Doporučení: velmi zajímavá investiční příležitost.'
+),
+(
+    'Prostorný byt 5+kk mezonet, Musílkova',
+    'Košíře',
+    14765000,
+    136.7,
+    50.0645, 14.3721,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Košíře (108 000 Kč/m²). Lokalita těží z blízkosti tramvajové trati směr centrum. Cena je adekvátní vzhledem k lokalitě a stavu nemovitosti.'
+),
+(
+    'Cihlový byt 2+kk, Wolkerova',
+    'Dejvice',
+    6450000,
+    44.8,
+    50.1016, 14.3844,
+    'Pod tržní cenou (-4 %)',
+    'AI model porovnal 33 srovnatelných nabídek v lokalitě Dejvice za posledních 90 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 4 % oproti průměru 150 000 Kč/m². Lokalita těží z blízkosti stanice metra A "Dejvická" a univerzitního kampusu ČVUT. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Cihlový byt 5+kk mezonet, Šolínova',
+    'Dejvice',
+    22820000,
+    138.3,
+    50.1024, 14.3871,
+    'Nadprůměrná cena (+10 %)',
+    'Nabídka je o 10 % nad průměrnou cenou v lokalitě Dejvice (150 000 Kč/m²). Lokalita těží z blízkosti stanice metra A "Dejvická" a univerzitního kampusu ČVUT. Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Zrekonstruovaný byt 2+1, Jugoslávských partyzánů',
+    'Dejvice',
+    6720000,
+    50.9,
+    50.1007, 14.394,
+    'Skvělá nabídka (-12 %)',
+    'AI model porovnal 34 srovnatelných nabídek v lokalitě Dejvice za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 12 % oproti průměru 150 000 Kč/m². Lokalita těží z blízkosti stanice metra A "Dejvická" a univerzitního kampusu ČVUT. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Byt 2+kk v klidné lokalitě, Nad Královskou oborou',
+    'Bubeneč',
+    6645000,
+    46.1,
+    50.104, 14.4128,
+    'Pod tržní cenou (-7 %)',
+    'AI model porovnal 51 srovnatelných nabídek v lokalitě Bubeneč za posledních 60 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 7 % oproti průměru 155 000 Kč/m². Lokalita těží z blízkosti parku Stromovka. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Novostavba, byt 4+kk, Terronská',
+    'Bubeneč',
+    12925000,
+    101.7,
+    50.1019, 14.4139,
+    'Skvělá nabídka (-18 %)',
+    'AI model porovnal 69 srovnatelných nabídek v lokalitě Bubeneč za posledních 30 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 18 % oproti průměru 155 000 Kč/m². Lokalita těží z blízkosti parku Stromovka. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Prostorný byt 2+1, Bělohorská',
+    'Břevnov',
+    6875000,
+    57.1,
+    50.0831, 14.3669,
+    'Nadprůměrná cena (+2 %)',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Břevnov (118 000 Kč/m²). Lokalita těží z blízkosti Břevnovského kláštera a tramvajové trati. Nabídka odpovídá standardnímu tržnímu standardu v této části Prahy.'
+),
+(
+    'Byt 2+1 v klidné lokalitě, Loretánská',
+    'Břevnov',
+    6430000,
+    52.9,
+    50.0826, 14.3643,
+    'Nadprůměrná cena (+3 %)',
+    'Nabídka je o 3 % nad průměrnou cenou v lokalitě Břevnov (118 000 Kč/m²). Lokalita těží z blízkosti Břevnovského kláštera a tramvajové trati. I přes vyšší cenu zůstává v lokalitě silná poptávka.'
+),
+(
+    'Novostavba, byt Garsoniéra, Jateční',
+    'Holešovice',
+    3365000,
+    22.9,
+    50.0974, 14.4373,
+    'Nadprůměrná cena (+5 %)',
+    'Nabídka je o 5 % nad průměrnou cenou v lokalitě Holešovice (140 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Vltavská" a Výstaviště. Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Útulný byt 4+kk, Jateční',
+    'Holešovice',
+    11560000,
+    96.0,
+    50.0971, 14.4348,
+    'Skvělá nabídka (-14 %)',
+    'AI model porovnal 72 srovnatelných nabídek v lokalitě Holešovice za posledních 45 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 14 % oproti průměru 140 000 Kč/m². Lokalita těží z blízkosti stanice metra C "Vltavská" a Výstaviště. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
+),
+(
+    'Útulný byt Garsoniéra, Ortenovo náměstí',
+    'Holešovice',
+    4240000,
+    30.3,
+    50.0982, 14.4353,
+    'Tržní cena',
+    'Cena odpovídá aktuálnímu tržnímu průměru lokality Holešovice (140 000 Kč/m²). Lokalita těží z blízkosti stanice metra C "Vltavská" a Výstaviště. Cena je adekvátní vzhledem k lokalitě a stavu nemovitosti.'
+),
+(
+    'Byt 3+kk s balkonem, Milady Horákové',
+    'Letná',
+    9115000,
+    63.8,
+    50.0958, 14.4166,
+    'Pod tržní cenou (-6 %)',
+    'AI model porovnal 54 srovnatelných nabídek v lokalitě Letná za posledních 45 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 6 % oproti průměru 152 000 Kč/m². Lokalita těží z blízkosti Letenského parku s výhledem na Vltavu. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Byt 1+1 s výhledem, Milady Horákové',
+    'Letná',
+    5870000,
+    39.8,
+    50.0932, 14.4184,
+    'Pod tržní cenou (-3 %)',
+    'AI model porovnal 49 srovnatelných nabídek v lokalitě Letná za posledních 90 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 3 % oproti průměru 152 000 Kč/m². Lokalita těží z blízkosti Letenského parku s výhledem na Vltavu. Doporučujeme rychlé jednání, podobné nabídky mizí z trhu během několika týdnů.'
+),
+(
+    'Byt 2+1 s balkonem, U Balabenky',
+    'Libeň',
+    5490000,
+    47.1,
+    50.1071, 14.4604,
+    'Nadprůměrná cena (+6 %)',
+    'Nabídka je o 6 % nad průměrnou cenou v lokalitě Libeň (110 000 Kč/m²). Lokalita těží z blízkosti stanice metra B "Palmovka". Cena je vyšší než srovnatelné nabídky, kupující by měl zvážit vyjednávání.'
+),
+(
+    'Cihlový byt 4+kk, Zenklova',
+    'Libeň',
+    9210000,
+    92.0,
+    50.1042, 14.4619,
+    'Pod tržní cenou (-9 %)',
+    'AI model porovnal 49 srovnatelných nabídek v lokalitě Libeň za posledních 60 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 9 % oproti průměru 110 000 Kč/m². Lokalita těží z blízkosti stanice metra B "Palmovka". Doporučení: velmi zajímavá investiční příležitost.'
+),
+(
+    'Byt 2+1 s výhledem, U Balabenky',
+    'Libeň',
+    5785000,
+    49.6,
+    50.1094, 14.4684,
+    'Nadprůměrná cena (+6 %)',
+    'Nabídka je o 6 % nad průměrnou cenou v lokalitě Libeň (110 000 Kč/m²). Lokalita těží z blízkosti stanice metra B "Palmovka". Model doporučuje před koupí individuální posouzení technického stavu.'
+),
+(
+    'Zrekonstruovaný byt 2+1, Kolbenova',
+    'Vysočany',
+    5160000,
+    47.3,
+    50.1099, 14.4863,
+    'Nadprůměrná cena (+7 %)',
+    'Nabídka je o 7 % nad průměrnou cenou v lokalitě Vysočany (102 000 Kč/m²). Lokalita těží z blízkosti stanice metra B "Vysočanská" a nové výstavby v okolí. Prémiová cena je částečně vyvážena kvalitou provedení a vybavením.'
+),
+(
+    'Byt 5+kk mezonet s výhledem, Freyova',
+    'Vysočany',
+    14175000,
+    154.4,
+    50.1162, 14.4839,
+    'Pod tržní cenou (-10 %)',
+    'AI model porovnal 30 srovnatelných nabídek v lokalitě Vysočany za posledních 90 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 10 % oproti průměru 102 000 Kč/m². Lokalita těží z blízkosti stanice metra B "Vysočanská" a nové výstavby v okolí. Doporučení: velmi zajímavá investiční příležitost.'
+),
+(
+    'Cihlový byt 4+1, Poděbradská',
+    'Vysočany',
+    9850000,
+    108.5,
+    50.1119, 14.4827,
+    'Pod tržní cenou (-11 %)',
+    'AI model porovnal 70 srovnatelných nabídek v lokalitě Vysočany za posledních 60 dní a vyhodnotil tuto nemovitost jako podhodnocenou o 11 % oproti průměru 102 000 Kč/m². Lokalita těží z blízkosti stanice metra B "Vysočanská" a nové výstavby v okolí. Poměr cena/lokalita je u této nabídky výrazně nadprůměrný.'
 );
 
 -- --------------------------------------------------------------

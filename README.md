@@ -13,7 +13,7 @@
 
 Real estate buyers and investors struggle to answer one simple question fast: **is this listing priced fairly for its neighbourhood?** This portal answers that in one glance by combining:
 
-- a **geospatial view** of live listings across Prague's most active districts (Karlín, Vinohrady, Žižkov, Smíchov),
+- a **geospatial view** of 50 live listings spread across 20 Prague districts, from the historical center (Staré Město, Malá Strana) to residential and emerging areas (Karlín, Vinohrady, Žižkov, Smíchov, Dejvice, Holešovice, Vysočany, and more),
 - a **price-per-m² benchmark** computed directly in the database, and
 - an **AI-generated verdict** ("Pod tržní cenou -8 %", "Tržní cena", "Nadprůměrná cena +5 %") that turns a raw price into an actionable signal.
 
