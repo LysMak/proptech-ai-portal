@@ -122,6 +122,24 @@
 
   a { color: inherit; }
 
+  /* One consistent keyboard-focus ring for every custom control
+     (buttons, chips, cards) instead of leaving it to each browser's
+     own default outline — only shows for keyboard/assistive-tech
+     navigation, never on mouse or touch. */
+  .theme-toggle:focus-visible,
+  .settings-option:focus-visible,
+  .deal-chip:focus-visible,
+  .filters-toggle:focus-visible,
+  .copy-link-btn:focus-visible,
+  .filters button.reset:focus-visible,
+  .filters input:focus-visible,
+  .filters select:focus-visible,
+  .card:focus-visible,
+  .market-stat-source:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
   /* ---------- Header ---------- */
   header.app-header {
     display: flex;
@@ -703,10 +721,27 @@
       max-height: none;
     }
 
-    header.app-header { padding: 10px 16px; }
+    header.app-header { padding: 10px 16px; gap: 8px; }
     .brand h1 { font-size: 1.1rem; }
-    .stats-bar { justify-content: flex-start; width: 100%; }
+    /* Purely decorative tagline — on a phone, the stats row right below
+       already communicates the useful part, so drop this to save
+       vertical space for the map/list instead. */
+    .brand p { display: none; }
+    .stats-bar { justify-content: flex-start; width: 100%; gap: 14px; }
     .stat { text-align: left; }
+
+    /* Bigger tap targets on touch screens than the mouse-era 24-38px
+       defaults. */
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+    }
+    .copy-link-btn {
+      width: 32px;
+      height: 32px;
+      font-size: 0.8rem;
+    }
+    .card-top-actions { gap: 8px; }
 
     /* Filters collapse behind a toggle button so the map is visible
        without scrolling past a wall of controls first. */
@@ -754,6 +789,13 @@
       flex-wrap: wrap;
       flex: 1 1 100%;
     }
+
+    /* A little tighter than the desktop 16px so more of the card's
+       content fits without wrapping on a ~360px-wide screen. */
+    .list-panel { padding: 12px; gap: 10px; }
+    .card { padding: 13px; }
+    .card-title { font-size: 0.94rem; }
+    .ai-summary { font-size: 0.8rem; }
   }
 </style>
 </head>
