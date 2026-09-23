@@ -204,6 +204,33 @@
     letter-spacing: 0.02em;
   }
 
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-good);
+    vertical-align: middle;
+  }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-good);
+    animation: live-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.75); }
+  }
+  /* Respect users who've asked their OS for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot { animation: none; }
+  }
+
   .brand p {
     margin: 2px 0 0;
     font-size: 0.82rem;
@@ -391,6 +418,13 @@
   }
   .deal-chip:hover { opacity: 0.8; }
 
+  .deal-chip-count {
+    font-weight: 700;
+    opacity: 0.7;
+    font-variant-numeric: tabular-nums;
+  }
+  .deal-chip-count:empty { display: none; }
+
   .deal-chip-dot {
     width: 9px;
     height: 9px;
@@ -489,6 +523,12 @@
     text-align: center;
     padding: 40px 16px;
     font-size: 0.92rem;
+  }
+  .empty-state-icon {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 10px;
+    opacity: 0.7;
   }
 
   .error-state { color: var(--color-bad); }
@@ -929,7 +969,7 @@
 <header class="app-header">
   <div class="brand">
     <div>
-      <h1>PropTech AI Analytics <span class="tag">Praha</span></h1>
+      <h1>PropTech AI Analytics <span class="tag">Praha</span> <span class="live-badge" title="Data fetched live from Supabase on every map move"><span class="live-dot"></span>live</span></h1>
       <p data-i18n="subtitle">Real-time market intelligence for Prague residential listings</p>
     </div>
   </div>
@@ -961,8 +1001,8 @@
       <div class="settings-group">
         <div class="settings-group-label" data-i18n="languageLabel">Jazyk</div>
         <div class="settings-options">
-          <button type="button" class="settings-option" data-lang-choice="cs">Čeština</button>
-          <button type="button" class="settings-option" data-lang-choice="en">English</button>
+          <button type="button" class="settings-option" data-lang-choice="cs">🇨🇿 Čeština</button>
+          <button type="button" class="settings-option" data-lang-choice="en">🇬🇧 English</button>
         </div>
       </div>
     </div>
@@ -1002,13 +1042,13 @@
   </select>
   <div class="deal-filter" id="dealFilter">
     <button type="button" class="deal-chip active" data-deal-filter="deal-good" aria-pressed="true">
-      <span class="deal-chip-dot dot-good"></span><span data-i18n="belowMarket">Pod tržní cenou</span>
+      <span class="deal-chip-dot dot-good"></span><span data-i18n="belowMarket">Pod tržní cenou</span><span class="deal-chip-count" id="dealCountGood"></span>
     </button>
     <button type="button" class="deal-chip active" data-deal-filter="deal-neutral" aria-pressed="true">
-      <span class="deal-chip-dot dot-neutral"></span><span data-i18n="marketPrice">Tržní cena</span>
+      <span class="deal-chip-dot dot-neutral"></span><span data-i18n="marketPrice">Tržní cena</span><span class="deal-chip-count" id="dealCountNeutral"></span>
     </button>
     <button type="button" class="deal-chip active" data-deal-filter="deal-bad" aria-pressed="true">
-      <span class="deal-chip-dot dot-bad"></span><span data-i18n="aboveMarket">Nadprůměrná cena</span>
+      <span class="deal-chip-dot dot-bad"></span><span data-i18n="aboveMarket">Nadprůměrná cena</span><span class="deal-chip-count" id="dealCountBad"></span>
     </button>
   </div>
   <button class="reset" id="filterReset" type="button" data-i18n="resetFilters">Reset filtrů</button>
@@ -1466,13 +1506,13 @@
       applyFiltersAndRender();
 
       if (allProperties.length === 0) {
-        container.innerHTML = `<div class="empty-state">${t("noResultsViewport")}</div>`;
+        container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">🗺️</span>${t("noResultsViewport")}</div>`;
         document.getElementById("resultCount").textContent = "";
       }
     } catch (err) {
       console.error("Supabase fetch failed:", err);
       container.innerHTML =
-        `<div class="error-state">${t("errorLoad").replace("{err}", escapeHtml(err.message || String(err)))}</div>`;
+        `<div class="error-state"><span class="empty-state-icon">⚠️</span>${t("errorLoad").replace("{err}", escapeHtml(err.message || String(err)))}</div>`;
     } finally {
       fetchInFlight = false;
     }
@@ -1555,7 +1595,8 @@
   // ------------------------------------------------------------
   // Filtering + sorting
   // ------------------------------------------------------------
-  function getFilteredProperties() {
+  function getFilteredProperties(options) {
+    const ignoreDealFilter = options && options.ignoreDealFilter;
     const search = document.getElementById("filterSearch").value.trim().toLowerCase();
     const district = document.getElementById("filterDistrict").value;
     const priceRange = document.getElementById("filterPrice").value;
@@ -1574,7 +1615,7 @@
         matchesPrice = p.price >= min && p.price <= max;
       }
 
-      const matchesDeal = activeDealFilters.has(dealClass(p.deal_rating));
+      const matchesDeal = ignoreDealFilter || activeDealFilters.has(dealClass(p.deal_rating));
 
       return matchesSearch && matchesDistrict && matchesPrice && matchesDeal;
     });
@@ -1604,6 +1645,22 @@
     renderCards(filtered);
     updateStats(filtered);
     updateMarkerVisibility(filtered);
+    updateDealChipCounts();
+  }
+
+  // How many listings fall into each deal-rating bucket under the
+  // *other* active filters (search/district/price), ignoring the deal
+  // chips' own on/off state — so a chip always shows how many
+  // listings selecting it would include, not how many are currently
+  // shown by it.
+  function updateDealChipCounts() {
+    const counts = { "deal-good": 0, "deal-neutral": 0, "deal-bad": 0 };
+    getFilteredProperties({ ignoreDealFilter: true }).forEach((p) => {
+      counts[dealClass(p.deal_rating)]++;
+    });
+    document.getElementById("dealCountGood").textContent = `(${counts["deal-good"]})`;
+    document.getElementById("dealCountNeutral").textContent = `(${counts["deal-neutral"]})`;
+    document.getElementById("dealCountBad").textContent = `(${counts["deal-bad"]})`;
   }
 
   // Toggling display:none on a marker's own element (the old approach)
@@ -1660,7 +1717,7 @@
     countEl.textContent = `${properties.length} ${properties.length === 1 ? t("resultOne") : t("resultMany")}`;
 
     if (properties.length === 0) {
-      container.innerHTML = `<div class="empty-state">${t("noResultsFilter")}</div>`;
+      container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">🔍</span>${t("noResultsFilter")}</div>`;
       return;
     }
 
