@@ -11,6 +11,7 @@
 
 <!-- Social link previews -->
 <meta property="og:type" content="website" />
+<meta property="og:url" content="https://proptech-ai-portal.vercel.app/" />
 <meta property="og:title" content="PropTech AI Analytics — Praha" />
 <meta property="og:description" content="AI-powered analytics portal for Prague residential real estate — interactive map, market comparison and AI valuation for 50 listings across 20 districts." />
 <meta name="twitter:card" content="summary" />
@@ -246,9 +247,16 @@
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(0.75); }
   }
-  /* Respect users who've asked their OS for less motion. */
+  /* Respect users who've asked their OS for less motion — this
+     overrides every animation/transition site-wide (card entrance,
+     resize-handle fade, hover lifts, etc.), not just the live-dot. */
   @media (prefers-reduced-motion: reduce) {
-    .live-dot { animation: none; }
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   .live-clock {
@@ -941,6 +949,11 @@
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     border: 2px solid rgba(15,17,21,0.5);
+    cursor: pointer;
+  }
+  .price-pin:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-primary), 0 2px 6px rgba(0,0,0,0.4);
+    outline: none;
   }
   .price-pin.deal-good { background: var(--color-good); color: #06301a; }
   .price-pin.deal-bad { background: var(--color-bad); color: #380608; }
@@ -1384,19 +1397,21 @@
     class="field-search"
     data-i18n-placeholder="searchPlaceholder"
     placeholder="Hledat podle názvu nebo ulice…"
+    data-i18n-aria-label="searchAriaLabel"
+    aria-label="Hledat nabídky podle názvu nebo ulice"
     autocomplete="off"
   />
-  <select id="filterDistrict" class="field-district">
+  <select id="filterDistrict" class="field-district" data-i18n-aria-label="districtAriaLabel" aria-label="Filtrovat podle čtvrti">
     <option value="" data-i18n="allDistricts">Všechny čtvrti</option>
   </select>
-  <select id="filterPrice" class="field-price">
+  <select id="filterPrice" class="field-price" data-i18n-aria-label="priceAriaLabel" aria-label="Filtrovat podle cenového rozpočtu">
     <option value="" data-i18n="anyBudget">Jakýkoli rozpočet</option>
     <option value="0-5000000" data-i18n="budget1">do 5 mil. Kč</option>
     <option value="5000000-8000000" data-i18n="budget2">5 - 8 mil. Kč</option>
     <option value="8000000-12000000" data-i18n="budget3">8 - 12 mil. Kč</option>
     <option value="12000000-999999999" data-i18n="budget4">12 mil. Kč +</option>
   </select>
-  <select id="filterSort" class="field-sort">
+  <select id="filterSort" class="field-sort" data-i18n-aria-label="sortAriaLabel" aria-label="Řadit nabídky">
     <option value="default" data-i18n="sortDefault">Řadit: výchozí</option>
     <option value="price-asc" data-i18n="sortPriceAsc">Cena: od nejnižší</option>
     <option value="price-desc" data-i18n="sortPriceDesc">Cena: od nejvyšší</option>
@@ -1459,7 +1474,7 @@
 </div>
 
 <div id="compareModal" class="compare-modal-overlay" hidden>
-  <div class="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle">
+  <div class="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle" tabindex="-1">
     <div class="compare-modal-header">
       <h2 id="compareModalTitle" data-i18n="compareTitle">Porovnání nabídek</h2>
       <button type="button" id="compareCloseBtn" class="compare-modal-close" data-i18n="compareClose" aria-label="Zavřít">Zavřít</button>
@@ -1513,6 +1528,10 @@
       themeLight: "Světlý",
       languageLabel: "Jazyk",
       searchPlaceholder: "Hledat podle názvu nebo ulice…",
+      searchAriaLabel: "Hledat nabídky podle názvu nebo ulice",
+      districtAriaLabel: "Filtrovat podle čtvrti",
+      priceAriaLabel: "Filtrovat podle cenového rozpočtu",
+      sortAriaLabel: "Řadit nabídky",
       allDistricts: "Všechny čtvrti",
       anyBudget: "Jakýkoli rozpočet",
       budget1: "do 5 mil. Kč",
@@ -1578,6 +1597,10 @@
       themeLight: "Light",
       languageLabel: "Language",
       searchPlaceholder: "Search by title or street…",
+      searchAriaLabel: "Search listings by title or street",
+      districtAriaLabel: "Filter by district",
+      priceAriaLabel: "Filter by price budget",
+      sortAriaLabel: "Sort listings",
       allDistricts: "All districts",
       anyBudget: "Any budget",
       budget1: "Up to 5M CZK",
@@ -2024,19 +2047,33 @@
 
     data.forEach((property) => {
       const cls = dealClass(property.deal_rating);
+      const displayTitle = currentLocale === "en" ? property.title_en : property.title;
+      const pinAriaLabel = `${displayTitle}, ${formatCzk(property.price)}`;
       const icon = L.divIcon({
         className: "",
-        html: `<div class="price-pin ${cls}" data-id="${property.id}">${formatPriceShort(property.price)}</div>`,
+        html: `<div class="price-pin ${cls}" data-id="${property.id}" role="button" tabindex="0" aria-label="${escapeHtml(pinAriaLabel)}">${formatPriceShort(property.price)}</div>`,
         iconSize: null,
       });
 
       const marker = L.marker([property.lat, property.lng], { icon }).addTo(markersLayer);
-      const displayTitle = currentLocale === "en" ? property.title_en : property.title;
       marker.bindPopup(
         `<div class="popup-title">${escapeHtml(displayTitle)}</div>` +
           `<div class="popup-price">${formatCzk(property.price)} · ${property.area_sqm} m²</div>`
       );
       marker.on("click", () => selectProperty(property.id, { flyTo: false }));
+
+      // Leaflet only wires up mouse/touch clicks on the marker icon —
+      // the pin is otherwise unreachable from the keyboard, so mirror
+      // the click handler on Enter/Space for the tabindex=0 pin above.
+      const markerEl = marker.getElement();
+      if (markerEl) {
+        markerEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            selectProperty(property.id, { flyTo: false });
+          }
+        });
+      }
 
       markersById.set(property.id, marker);
     });
@@ -2368,14 +2405,48 @@
     });
   }
 
+  // Focus the element that opened the modal is restored on close, and
+  // Tab/Shift+Tab are trapped inside it while it's open, so keyboard
+  // and screen-reader users can't silently tab into the page behind it.
+  let lastFocusedBeforeModal = null;
+
+  function getFocusableElements(container) {
+    return Array.from(
+      container.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
+  }
+
   function openCompareModal() {
     renderCompareModal();
+    lastFocusedBeforeModal = document.activeElement;
     document.getElementById("compareModal").hidden = false;
+    document.querySelector(".compare-modal").focus();
   }
 
   function closeCompareModal() {
     document.getElementById("compareModal").hidden = true;
+    if (lastFocusedBeforeModal && document.body.contains(lastFocusedBeforeModal)) {
+      lastFocusedBeforeModal.focus();
+    }
+    lastFocusedBeforeModal = null;
   }
+
+  document.querySelector(".compare-modal").addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const focusable = getFocusableElements(e.currentTarget);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
 
   // ------------------------------------------------------------
   // Selection — links a card to its map marker
@@ -2404,6 +2475,7 @@
     if (cardEl) cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
     updateUrlForSelection(id);
+    document.title = `${currentLocale === "en" ? property.title_en : property.title} · PropTech AI Analytics`;
   }
 
   // ------------------------------------------------------------
@@ -2612,6 +2684,9 @@
     document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.placeholder = t(el.dataset.i18nPlaceholder);
     });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
+    });
     settingsToggle.setAttribute("aria-label", t("settings"));
 
     document.querySelectorAll(".settings-option[data-theme-choice]").forEach((btn) => {
@@ -2652,6 +2727,12 @@
     updateCompareBar();
     if (!document.getElementById("compareModal").hidden) renderCompareModal();
     updateFooterDate();
+    if (activeId != null) {
+      const activeProperty = allProperties.find((p) => p.id === activeId);
+      if (activeProperty) {
+        document.title = `${currentLocale === "en" ? activeProperty.title_en : activeProperty.title} · PropTech AI Analytics`;
+      }
+    }
   }
 
   const settingsToggle = document.getElementById("settingsToggle");
