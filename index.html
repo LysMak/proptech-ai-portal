@@ -548,27 +548,20 @@
 
   /* Same primary -> accent gradient as the header/footer hairlines,
      applied to every scrollable area on the page instead of just the
-     browser's plain default thumb. Firefox's scrollbar-color can only
-     take a solid color (no gradient support), so it gets --color-
-     primary as a close solid stand-in; Chromium/WebKit's
-     ::-webkit-scrollbar-* pseudo-elements support a real gradient. */
-  .list-panel,
-  body,
-  .compare-modal-body {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-primary) transparent;
-  }
-  /* Since Chrome 121, Chromium also implements the standard
-     scrollbar-color property above — and when it's set, Chrome uses
-     it *instead of* the ::-webkit-scrollbar-thumb gradient below,
-     rendering a flat color rather than the gradient. Wherever the
-     legacy pseudo-elements are actually supported (Chromium/WebKit),
-     turn scrollbar-color back off so it defers to them again. */
-  @supports selector(::-webkit-scrollbar) {
+     browser's plain default thumb. scrollbar-color can only take a
+     solid color (no gradient support) and, in Chromium 121+, having
+     it set *at all* — even to "auto" — keeps Chrome on its own thin
+     overlay-scrollbar rendering instead of deferring to the
+     ::-webkit-scrollbar-thumb gradient below. So it's scoped with
+     @supports to browsers that *don't* understand that pseudo-element
+     (in practice, Firefox) — Chromium/WebKit never sees scrollbar-
+     color at all and paints the gradient thumb normally. */
+  @supports not selector(::-webkit-scrollbar) {
     .list-panel,
     body,
     .compare-modal-body {
-      scrollbar-color: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-primary) transparent;
     }
   }
   .list-panel::-webkit-scrollbar,
