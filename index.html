@@ -558,6 +558,19 @@
     scrollbar-width: thin;
     scrollbar-color: var(--color-primary) transparent;
   }
+  /* Since Chrome 121, Chromium also implements the standard
+     scrollbar-color property above — and when it's set, Chrome uses
+     it *instead of* the ::-webkit-scrollbar-thumb gradient below,
+     rendering a flat color rather than the gradient. Wherever the
+     legacy pseudo-elements are actually supported (Chromium/WebKit),
+     turn scrollbar-color back off so it defers to them again. */
+  @supports selector(::-webkit-scrollbar) {
+    .list-panel,
+    body,
+    .compare-modal-body {
+      scrollbar-color: auto;
+    }
+  }
   .list-panel::-webkit-scrollbar,
   body::-webkit-scrollbar,
   .compare-modal-body::-webkit-scrollbar {
