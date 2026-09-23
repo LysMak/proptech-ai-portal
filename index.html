@@ -544,16 +544,41 @@
     flex-direction: column;
     gap: 12px;
     border-left: 1px solid var(--color-border);
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
   }
-  .list-panel::-webkit-scrollbar { width: 8px; }
-  .list-panel::-webkit-scrollbar-track { background: transparent; }
-  .list-panel::-webkit-scrollbar-thumb {
-    background: var(--color-border);
+
+  /* Same primary -> accent gradient as the header/footer hairlines,
+     applied to every scrollable area on the page instead of just the
+     browser's plain default thumb. Firefox's scrollbar-color can only
+     take a solid color (no gradient support), so it gets --color-
+     primary as a close solid stand-in; Chromium/WebKit's
+     ::-webkit-scrollbar-* pseudo-elements support a real gradient. */
+  .list-panel,
+  body,
+  .compare-modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) transparent;
+  }
+  .list-panel::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  .compare-modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  .list-panel::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track,
+  .compare-modal-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .list-panel::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb,
+  .compare-modal-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--color-primary), var(--color-accent));
     border-radius: 999px;
   }
-  .list-panel::-webkit-scrollbar-thumb:hover { background: var(--color-primary-dim); }
+  .list-panel::-webkit-scrollbar-thumb:hover,
+  body::-webkit-scrollbar-thumb:hover,
+  .compare-modal-body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--color-accent), var(--color-primary));
+  }
 
   .list-panel .empty-state,
   .list-panel .error-state {
