@@ -72,6 +72,11 @@
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 20px -10px rgba(0, 0, 0, 0.45);
     --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.25), 0 14px 28px -12px rgba(0, 0, 0, 0.55);
+    --shadow-toolbar: 0 10px 24px -8px rgba(0, 0, 0, 0.45);
+    --shadow-panel-edge: 0 10px 20px -12px rgba(0, 0, 0, 0.5);
+    --shadow-panel-side: -6px 0 16px -12px rgba(0, 0, 0, 0.5);
+    --bg-glow: rgba(79, 141, 253, 0.09);
+    --inset-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
     font-size: 16px;
   }
 
@@ -95,6 +100,11 @@
     --shadow: 0 8px 24px rgba(20, 24, 33, 0.1);
     --shadow-card: 0 1px 2px rgba(20, 24, 33, 0.06), 0 8px 16px -10px rgba(20, 24, 33, 0.12);
     --shadow-card-hover: 0 2px 4px rgba(20, 24, 33, 0.08), 0 14px 24px -12px rgba(20, 24, 33, 0.18);
+    --shadow-toolbar: 0 6px 16px -8px rgba(20, 24, 33, 0.18);
+    --shadow-panel-edge: 0 6px 14px -10px rgba(20, 24, 33, 0.2);
+    --shadow-panel-side: -6px 0 14px -10px rgba(20, 24, 33, 0.15);
+    --bg-glow: rgba(47, 111, 224, 0.05);
+    --inset-shadow: inset 0 1px 2px rgba(20, 24, 33, 0.08);
   }
 
   * { box-sizing: border-box; }
@@ -102,7 +112,13 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: var(--color-bg);
+    background-color: var(--color-bg);
+    /* A soft light source in the upper half of the page instead of one
+       flat color everywhere — subtle, but it's what gives the whole
+       canvas a sense of depth rather than looking like a single sheet. */
+    background-image: radial-gradient(1100px 550px at 50% -8%, var(--bg-glow), transparent 65%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: var(--color-text);
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -167,6 +183,7 @@
     padding: 14px 24px;
     background: var(--color-panel);
     border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-toolbar);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -375,6 +392,7 @@
     width: 52px;
     background: var(--color-bg);
     border: 1px solid var(--color-border);
+    box-shadow: var(--inset-shadow);
     color: var(--color-text);
     padding: 5px 6px;
     border-radius: 7px;
@@ -400,6 +418,7 @@
   .filters select {
     background: var(--color-bg);
     border: 1px solid var(--color-border);
+    box-shadow: var(--inset-shadow);
     color: var(--color-text);
     padding: 9px 12px;
     border-radius: 10px;
@@ -496,6 +515,12 @@
     padding: 8px 24px;
     background: var(--color-panel-alt);
     border-bottom: 1px solid var(--color-border);
+    /* In case the ČSÚ market-stat bar below hasn't loaded/shown yet,
+       this is the last bar in the toolbar stack — same depth cue as
+       .market-stat below, whichever one ends up being visually last. */
+    box-shadow: var(--shadow-panel-edge);
+    position: relative;
+    z-index: 1;
   }
 
   /* ---------- Live market stat (ČSÚ open data) ---------- */
@@ -510,6 +535,12 @@
     font-size: 0.8rem;
     font-weight: 600;
     border-bottom: 1px solid var(--color-border);
+    /* Last bar in the docked header/filters/hint/market-stat stack —
+       the shadow here reads as the whole toolbar zone floating above
+       the map/list content beneath it. */
+    box-shadow: var(--shadow-panel-edge);
+    position: relative;
+    z-index: 1;
   }
   .market-stat[hidden] { display: none; }
   .market-stat-source {
@@ -544,6 +575,9 @@
     flex-direction: column;
     gap: 12px;
     border-left: 1px solid var(--color-border);
+    /* Reads as a raised panel sitting beside the map rather than two
+       flat regions separated by a hairline. */
+    box-shadow: var(--shadow-panel-side);
   }
 
   /* Same primary -> accent gradient as the header/footer hairlines,
@@ -1129,6 +1163,11 @@
       border-top: 1px solid var(--color-border);
       height: 100%;
       max-height: none;
+      /* Now stacked below the map, not beside it — the shadow needs
+         to move from the left edge to the top edge to still read as
+         "this panel sits above what's behind it" rather than looking
+         like light is coming from a nonsensical direction. */
+      box-shadow: 0 -6px 16px -12px rgba(0, 0, 0, 0.35);
     }
 
     header.app-header { padding: 10px 16px; gap: 8px; }
