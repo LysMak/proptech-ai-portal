@@ -40,6 +40,13 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- Leaflet.markercluster — groups nearby markers into a count bubble so
+     a dense district (e.g. 3 listings on the same street) doesn't render
+     as a pile of overlapping, unreadable price pins. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
 <!-- Supabase JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -667,6 +674,25 @@
     outline: 3px solid #fff;
   }
 
+  /* Re-skin Leaflet.markercluster's default bubbles (normally a
+     green/yellow/orange scale) to the site's own primary color —
+     those three colors already mean "good/neutral/bad deal" via the
+     price pins, so reusing them for cluster size would be confusing. */
+  .marker-cluster-small,
+  .marker-cluster-medium,
+  .marker-cluster-large {
+    background-color: var(--color-primary-dim);
+  }
+  .marker-cluster-small div,
+  .marker-cluster-medium div,
+  .marker-cluster-large div {
+    background-color: var(--color-primary);
+  }
+  .marker-cluster span {
+    color: #ffffff;
+    font-weight: 700;
+  }
+
   .leaflet-popup-content-wrapper {
     background: var(--color-panel);
     color: var(--color-text);
@@ -1168,7 +1194,15 @@
     }
   });
 
-  markersLayer = L.layerGroup().addTo(map);
+  // A plain layerGroup would just pile up overlapping pins once a
+  // district has more than a couple of listings close together (see
+  // maxClusterRadius) — markerClusterGroup groups those into a single
+  // numbered bubble instead, and re-expands them as you zoom in.
+  markersLayer = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+  }).addTo(map);
 
   // ------------------------------------------------------------
   // Helpers
@@ -1446,12 +1480,19 @@
     updateMarkerVisibility(filtered);
   }
 
+  // Toggling display:none on a marker's own element (the old approach)
+  // doesn't work once markers live inside a cluster group — a hidden-
+  // but-still-a-member marker would still count towards its cluster's
+  // number and still render if the cluster spiderfies. Actually adding
+  // to / removing from markersLayer keeps cluster counts (and the map)
+  // honest about what's really visible under the active filters.
   function updateMarkerVisibility(filtered) {
     const visibleIds = new Set(filtered.map((p) => p.id));
     markersById.forEach((marker, id) => {
       const shouldShow = visibleIds.has(id);
-      const el = marker.getElement();
-      if (el) el.style.display = shouldShow ? "" : "none";
+      const isShown = markersLayer.hasLayer(marker);
+      if (shouldShow && !isShown) markersLayer.addLayer(marker);
+      if (!shouldShow && isShown) markersLayer.removeLayer(marker);
     });
   }
 
