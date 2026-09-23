@@ -10,6 +10,7 @@ const {
   computeYoyTrendPct,
   computeHistoryChangePct,
   sparklineSvg,
+  mortgagePayment,
 } = utilsModule;
 
 describe("dealClass", () => {
@@ -171,5 +172,31 @@ describe("sparklineSvg", () => {
     const svg = sparklineSvg([80, 90, 100], { downColor: "#00ff00", upColor: "#ff0000" });
     expect(svg).toContain("#ff0000");
     expect(svg).not.toContain("#00ff00");
+  });
+});
+
+describe("mortgagePayment", () => {
+  it("computes a standard 20% down, 5%, 30-year payment", () => {
+    // 9 260 000 CZK, 20% down -> principal 7 408 000, 5% / 30y.
+    expect(mortgagePayment(9260000, 20, 5, 30)).toBeCloseTo(39767.75, 1);
+  });
+
+  it("falls back to a straight-line split at 0% interest", () => {
+    // 1 200 000 principal over 10 years (120 months) with no interest.
+    expect(mortgagePayment(1200000, 0, 0, 10)).toBeCloseTo(10000, 5);
+  });
+
+  it("returns 0 when the down payment covers the full price", () => {
+    expect(mortgagePayment(9260000, 100, 5, 30)).toBe(0);
+  });
+
+  it("returns 0 instead of dividing by zero when the term is 0 years", () => {
+    expect(mortgagePayment(9260000, 20, 5, 0)).toBe(0);
+  });
+
+  it("a larger down payment lowers the monthly payment", () => {
+    const low = mortgagePayment(9260000, 10, 5, 30);
+    const high = mortgagePayment(9260000, 40, 5, 30);
+    expect(high).toBeLessThan(low);
   });
 });

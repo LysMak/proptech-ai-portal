@@ -107,6 +107,22 @@ function sparklineSvg(prices, options) {
   );
 }
 
+// Standard fixed-rate amortizing-loan monthly payment formula.
+// downPaymentPct/annualRatePct are whole percent (20 = 20%, 5.5 = 5.5%).
+// A 0% interest rate is handled as a straight-line split (no formula
+// singularity), and a down payment >= 100% means no loan at all.
+function mortgagePayment(price, downPaymentPct, annualRatePct, years) {
+  const principal = price * (1 - downPaymentPct / 100);
+  const numPayments = years * 12;
+  if (principal <= 0 || numPayments <= 0) return 0;
+
+  const monthlyRate = annualRatePct / 100 / 12;
+  if (monthlyRate === 0) return principal / numPayments;
+
+  const factor = Math.pow(1 + monthlyRate, numPayments);
+  return (principal * (monthlyRate * factor)) / (factor - 1);
+}
+
 const PropTechUtils = {
   dealClass,
   extractDealPct,
@@ -116,6 +132,7 @@ const PropTechUtils = {
   computeYoyTrendPct,
   computeHistoryChangePct,
   sparklineSvg,
+  mortgagePayment,
 };
 
 // Node/Vitest (CommonJS require/import interop) picks this branch up;

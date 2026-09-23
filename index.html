@@ -149,7 +149,10 @@
   .filters select:focus-visible,
   .card:focus-visible,
   .market-stat-source:focus-visible,
-  .footer-link:focus-visible {
+  .footer-link:focus-visible,
+  .compare-btn:focus-visible,
+  .compare-bar-btn:focus-visible,
+  .compare-modal-close:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
@@ -346,6 +349,41 @@
     background: var(--color-primary-dim);
     color: var(--color-primary-text);
     font-weight: 600;
+  }
+
+  .calc-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .calc-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--color-text-dim);
+  }
+  .calc-field-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+  .calc-field-input input {
+    width: 52px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    padding: 5px 6px;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    text-align: right;
+  }
+  .calc-field-input input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
   }
 
   /* ---------- Filters ---------- */
@@ -652,6 +690,36 @@
     white-space: nowrap;
   }
 
+  .compare-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-dim);
+    font-size: 0.72rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .compare-btn:hover { border-color: var(--color-primary); }
+  .compare-btn.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-dim);
+    color: var(--color-primary-text);
+  }
+
+  .card-calc {
+    font-size: 0.78rem;
+    color: var(--color-text-dim);
+    margin: -4px 0 10px;
+  }
+  .card-calc:empty { display: none; margin: 0; }
+
   .card-price-row {
     display: flex;
     align-items: baseline;
@@ -842,6 +910,138 @@
     border-radius: 4px;
   }
 
+  /* ---------- Compare bar + modal ---------- */
+  .compare-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .compare-bar[hidden] { display: none; }
+
+  .compare-bar-actions { display: flex; gap: 8px; }
+
+  .compare-bar-btn {
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-dim);
+    padding: 7px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+  .compare-bar-btn:hover { border-color: var(--color-primary); }
+  .compare-bar-btn.primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .compare-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(10, 12, 16, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .compare-modal-overlay[hidden] { display: none; }
+
+  .compare-modal {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-width: 720px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .compare-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+  .compare-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .compare-modal-close {
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-dim);
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .compare-modal-close:hover { border-color: var(--color-primary); color: var(--color-text); }
+
+  .compare-modal-body {
+    padding: 16px 20px 20px;
+    overflow-y: auto;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+  }
+  .compare-table th,
+  .compare-table td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: top;
+  }
+  .compare-table th.compare-row-label {
+    color: var(--color-text-dim);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .compare-table thead th {
+    color: var(--color-text-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+  }
+  .compare-table .compare-col-price { font-weight: 700; font-size: 1rem; }
+  .compare-remove-btn {
+    border: none;
+    background: transparent;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .compare-remove-btn:hover { color: var(--color-bad); }
+
   /* ---------- Footer ---------- */
   footer.app-footer {
     display: flex;
@@ -961,6 +1161,20 @@
     .card { padding: 13px; }
     .card-title { font-size: 0.94rem; }
     .ai-summary { font-size: 0.8rem; }
+
+    .compare-bar {
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      transform: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      text-align: center;
+    }
+    .compare-modal-overlay { padding: 12px; }
+    .compare-modal { max-height: 90vh; }
+    .compare-table { font-size: 0.78rem; }
+    .compare-table th, .compare-table td { padding: 7px 6px; }
   }
 </style>
 </head>
@@ -1003,6 +1217,23 @@
         <div class="settings-options">
           <button type="button" class="settings-option" data-lang-choice="cs">Čeština</button>
           <button type="button" class="settings-option" data-lang-choice="en">English</button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label" data-i18n="calcLabel">Hypoteční kalkulačka</div>
+        <div class="calc-inputs">
+          <label class="calc-field">
+            <span data-i18n="calcDownPayment">Akontace</span>
+            <span class="calc-field-input"><input type="number" id="calcDownPct" value="20" min="0" max="95" step="5" />%</span>
+          </label>
+          <label class="calc-field">
+            <span data-i18n="calcRate">Úrok</span>
+            <span class="calc-field-input"><input type="number" id="calcRate" value="5.0" min="0" max="15" step="0.1" />%</span>
+          </label>
+          <label class="calc-field">
+            <span data-i18n="calcTerm">Doba splácení</span>
+            <span class="calc-field-input"><input type="number" id="calcYears" value="30" min="5" max="40" step="1" /><span data-i18n="calcYearsUnit">let</span></span>
+          </label>
         </div>
       </div>
     </div>
@@ -1086,6 +1317,24 @@
   </div>
 </main>
 
+<div id="compareBar" class="compare-bar" hidden>
+  <span id="compareBarText"></span>
+  <div class="compare-bar-actions">
+    <button type="button" id="compareOpenBtn" class="compare-bar-btn primary" data-i18n="compareOpen">Porovnat</button>
+    <button type="button" id="compareClearBtn" class="compare-bar-btn" data-i18n="compareClear">Zrušit výběr</button>
+  </div>
+</div>
+
+<div id="compareModal" class="compare-modal-overlay" hidden>
+  <div class="compare-modal" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle">
+    <div class="compare-modal-header">
+      <h2 id="compareModalTitle" data-i18n="compareTitle">Porovnání nabídek</h2>
+      <button type="button" id="compareCloseBtn" class="compare-modal-close" data-i18n="compareClose" aria-label="Zavřít">Zavřít</button>
+    </div>
+    <div id="compareModalBody" class="compare-modal-body"></div>
+  </div>
+</div>
+
 <footer class="app-footer">
   <span data-i18n="footer">PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes</span>
   <a href="https://github.com/LysMak/proptech-ai-portal" target="_blank" rel="noopener" class="footer-link">🔗 GitHub</a>
@@ -1105,6 +1354,8 @@
   let activeId = null;      // currently selected property id
   let districtsSeen = new Set(); // district names seen so far, to build the filter dropdown incrementally
   let activeDealFilters = new Set(["deal-good", "deal-neutral", "deal-bad"]); // which colors to show
+  let compareSelection = new Set(); // ids picked for the compare table, capped at COMPARE_MAX
+  const COMPARE_MAX = 3;
   let fetchInFlight = false;
   const markersById = new Map();
   let markersLayer;         // set once the map is initialized below
@@ -1149,6 +1400,25 @@
       copyLinkDone: "✓ Zkopírováno",
       copyLinkFallback: "Zkopírujte odkaz na tuto nabídku:",
       aiSourceLabel: "🧠 Claude 3.5 Sonnet · předgenerováno",
+      calcLabel: "Hypoteční kalkulačka",
+      calcDownPayment: "Akontace",
+      calcRate: "Úrok",
+      calcTerm: "Doba splácení",
+      calcYearsUnit: "let",
+      calcCardLine: "💳 splátka od {value}/měs.",
+      compareLabel: "Porovnat",
+      compareBarText: "Vybráno k porovnání: {count}/3",
+      compareOpen: "Porovnat",
+      compareClear: "Zrušit výběr",
+      compareTitle: "Porovnání nabídek",
+      compareClose: "Zavřít",
+      compareRowDistrict: "Čtvrť",
+      compareRowPrice: "Cena",
+      compareRowArea: "Plocha",
+      compareRowPpsqm: "Kč/m²",
+      compareRowDeal: "Hodnocení AI",
+      compareRowPayment: "Odhad splátky/měs.",
+      compareFull: "Lze porovnat max. 3 nabídky najednou.",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
       errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
@@ -1195,6 +1465,25 @@
       copyLinkDone: "✓ Copied",
       copyLinkFallback: "Copy this link to the listing:",
       aiSourceLabel: "🧠 Claude 3.5 Sonnet · pre-generated",
+      calcLabel: "Mortgage calculator",
+      calcDownPayment: "Down payment",
+      calcRate: "Interest rate",
+      calcTerm: "Loan term",
+      calcYearsUnit: "yrs",
+      calcCardLine: "💳 from {value}/mo.",
+      compareLabel: "Compare",
+      compareBarText: "Selected to compare: {count}/3",
+      compareOpen: "Compare",
+      compareClear: "Clear selection",
+      compareTitle: "Listing comparison",
+      compareClose: "Close",
+      compareRowDistrict: "District",
+      compareRowPrice: "Price",
+      compareRowArea: "Area",
+      compareRowPpsqm: "CZK/m²",
+      compareRowDeal: "AI rating",
+      compareRowPayment: "Est. payment/mo.",
+      compareFull: "You can compare up to 3 listings at once.",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
       errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
@@ -1646,6 +1935,7 @@
     updateStats(filtered);
     updateMarkerVisibility(filtered);
     updateDealChipCounts();
+    syncFilterParamsToUrl();
   }
 
   // How many listings fall into each deal-rating bucket under the
@@ -1728,12 +2018,14 @@
         const delay = Math.min(i, 12) * 0.035;
         const title = currentLocale === "en" ? p.title_en : p.title;
         const summary = currentLocale === "en" ? p.ai_summary_en : p.ai_summary;
+        const compared = compareSelection.has(p.id);
         return `
           <article class="card ${active}" data-id="${p.id}" tabindex="0" role="button" aria-label="${escapeHtml(title)}" style="animation-delay: ${delay}s">
             <div class="card-top">
               <h3 class="card-title">${escapeHtml(title)}</h3>
               <div class="card-top-actions">
                 <span class="district-badge">${escapeHtml(p.district)}</span>
+                <button type="button" class="compare-btn ${compared ? "active" : ""}" data-compare-id="${p.id}" aria-pressed="${compared}" aria-label="${escapeHtml(t("compareLabel"))}" title="${escapeHtml(t("compareLabel"))}">⚖️</button>
                 <button type="button" class="copy-link-btn" data-copy-id="${p.id}" aria-label="${escapeHtml(t("copyLinkAria"))}" title="${escapeHtml(t("copyLinkAria"))}">🔗</button>
               </div>
             </div>
@@ -1741,6 +2033,7 @@
               <span class="card-price">${formatCzk(p.price)}</span>
               <span class="card-meta">📐 ${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
             </div>
+            <div class="card-calc" data-calc-price="${p.price}"></div>
             ${renderHistoryBlock(p.id)}
             <span class="deal-badge ${cls}">${escapeHtml(dealRatingDisplay(p.deal_rating))}</span>
             <div class="ai-summary">
@@ -1772,6 +2065,155 @@
         copyPermalink(Number(btn.dataset.copyId), btn);
       });
     });
+
+    container.querySelectorAll(".compare-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleCompare(Number(btn.dataset.compareId));
+      });
+    });
+
+    updateCalcLines();
+  }
+
+  // ------------------------------------------------------------
+  // Mortgage calculator — one shared set of inputs (in the settings
+  // panel) applied to every currently-rendered card, rather than
+  // repeating three inputs 50 times over. Recomputes in place instead
+  // of a full re-render, so adjusting a slider doesn't replay the
+  // card-in animation or lose scroll position.
+  // ------------------------------------------------------------
+  function getCalcInputs() {
+    const downPct = Number(document.getElementById("calcDownPct").value) || 0;
+    const rate = Number(document.getElementById("calcRate").value) || 0;
+    const years = Number(document.getElementById("calcYears").value) || 1;
+    return { downPct, rate, years };
+  }
+
+  function updateCalcLines() {
+    const { downPct, rate, years } = getCalcInputs();
+    document.querySelectorAll(".card-calc[data-calc-price]").forEach((el) => {
+      const price = Number(el.dataset.calcPrice);
+      const payment = PropTechUtils.mortgagePayment(price, downPct, rate, years);
+      el.textContent = t("calcCardLine").replace("{value}", formatCzk(Math.round(payment)));
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Listing comparison — pick up to COMPARE_MAX cards (⚖️ button),
+  // then view them side by side in a table.
+  // ------------------------------------------------------------
+  function toggleCompare(id) {
+    if (compareSelection.has(id)) {
+      compareSelection.delete(id);
+    } else {
+      if (compareSelection.size >= COMPARE_MAX) return; // silently capped — the bar already shows "x/3"
+      compareSelection.add(id);
+    }
+
+    const btn = document.querySelector(`.compare-btn[data-compare-id="${id}"]`);
+    if (btn) {
+      const isActive = compareSelection.has(id);
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-pressed", String(isActive));
+    }
+
+    updateCompareBar();
+    if (!document.getElementById("compareModal").hidden) renderCompareModal();
+  }
+
+  function updateCompareBar() {
+    const bar = document.getElementById("compareBar");
+    if (compareSelection.size === 0) {
+      bar.hidden = true;
+      return;
+    }
+    bar.hidden = false;
+    document.getElementById("compareBarText").textContent = t("compareBarText").replace("{count}", compareSelection.size);
+  }
+
+  function clearCompare() {
+    compareSelection.clear();
+    document.querySelectorAll(".compare-btn.active").forEach((btn) => {
+      btn.classList.remove("active");
+      btn.setAttribute("aria-pressed", "false");
+    });
+    updateCompareBar();
+    closeCompareModal();
+  }
+
+  function renderCompareModal() {
+    const body = document.getElementById("compareModalBody");
+    const items = [...compareSelection]
+      .map((id) => allProperties.find((p) => p.id === id))
+      .filter(Boolean);
+
+    if (items.length === 0) {
+      body.innerHTML = `<p>${escapeHtml(t("compareFull"))}</p>`;
+      return;
+    }
+
+    const { downPct, rate, years } = getCalcInputs();
+    const rows = [
+      { label: t("compareRowDistrict"), cell: (p) => escapeHtml(p.district) },
+      {
+        label: t("compareRowPrice"),
+        cell: (p) => `<span class="compare-col-price">${formatCzk(p.price)}</span>`,
+      },
+      { label: t("compareRowArea"), cell: (p) => `${p.area_sqm} m²` },
+      { label: t("compareRowPpsqm"), cell: (p) => formatCzk(p.price_per_sqm) },
+      {
+        label: t("compareRowDeal"),
+        cell: (p) => `<span class="deal-badge ${dealClass(p.deal_rating)}">${escapeHtml(dealRatingDisplay(p.deal_rating))}</span>`,
+      },
+      {
+        label: t("compareRowPayment"),
+        cell: (p) => formatCzk(Math.round(PropTechUtils.mortgagePayment(p.price, downPct, rate, years))),
+      },
+    ];
+
+    const titleOf = (p) => (currentLocale === "en" ? p.title_en : p.title);
+
+    body.innerHTML = `
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th></th>
+            ${items
+              .map(
+                (p) =>
+                  `<th>${escapeHtml(titleOf(p))}<br /><button type="button" class="compare-remove-btn" data-remove-id="${p.id}">✕</button></th>`
+              )
+              .join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `
+            <tr>
+              <th class="compare-row-label">${escapeHtml(row.label)}</th>
+              ${items.map((p) => `<td>${row.cell(p)}</td>`).join("")}
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+
+    body.querySelectorAll(".compare-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => toggleCompare(Number(btn.dataset.removeId)));
+    });
+  }
+
+  function openCompareModal() {
+    renderCompareModal();
+    document.getElementById("compareModal").hidden = false;
+  }
+
+  function closeCompareModal() {
+    document.getElementById("compareModal").hidden = true;
   }
 
   // ------------------------------------------------------------
@@ -1858,6 +2300,80 @@
       pendingDeepLinkId = id;
     } catch (err) {
       console.warn("Deep link lookup failed:", err);
+    }
+  }
+
+  // Mirrors search/district/price/sort/deal-filters into the URL too
+  // (q, district, price, sort, deals), the same replaceState-based
+  // approach as the ?id= permalink above — so a *filtered* view is
+  // shareable, not just a single selected listing. Called from
+  // applyFiltersAndRender(), i.e. on every filter change.
+  function syncFilterParamsToUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const setOrDelete = (key, value) => {
+        if (value) url.searchParams.set(key, value);
+        else url.searchParams.delete(key);
+      };
+
+      setOrDelete("q", document.getElementById("filterSearch").value.trim());
+      setOrDelete("district", document.getElementById("filterDistrict").value);
+      setOrDelete("price", document.getElementById("filterPrice").value);
+      const sort = document.getElementById("filterSort").value;
+      setOrDelete("sort", sort === "default" ? "" : sort);
+      // Omit "deals" entirely when nothing is filtered out (the common
+      // case), rather than always spelling out all three.
+      setOrDelete("deals", activeDealFilters.size === 3 ? "" : [...activeDealFilters].join(","));
+
+      history.replaceState(null, "", url.toString());
+    } catch (e) {
+      /* ignore — URL just won't reflect the filters */
+    }
+  }
+
+  // The reverse direction, run once during boot: restores filter UI
+  // state from the URL before the first fetch/render.
+  function applyFiltersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    const district = params.get("district");
+    const price = params.get("price");
+    const sort = params.get("sort");
+    const deals = params.get("deals");
+
+    if (q) document.getElementById("filterSearch").value = q;
+
+    if (district) {
+      // The district <select> is normally populated lazily as the
+      // bounding-box fetch discovers districts; if the URL names one
+      // that isn't an <option> yet, add it so the value can "take" —
+      // it'll just show 0 results until the map pans to cover it,
+      // same as picking a district the current view doesn't have.
+      const select = document.getElementById("filterDistrict");
+      if (![...select.options].some((o) => o.value === district)) {
+        const opt = document.createElement("option");
+        opt.value = district;
+        opt.textContent = district;
+        select.appendChild(opt);
+      }
+      select.value = district;
+      districtsSeen.add(district);
+    }
+
+    if (price) document.getElementById("filterPrice").value = price;
+    if (sort) document.getElementById("filterSort").value = sort;
+
+    if (deals) {
+      const valid = new Set(["deal-good", "deal-neutral", "deal-bad"]);
+      const keys = deals.split(",").filter((k) => valid.has(k));
+      if (keys.length > 0) {
+        activeDealFilters = new Set(keys);
+        document.querySelectorAll(".deal-chip").forEach((chip) => {
+          const isActive = activeDealFilters.has(chip.dataset.dealFilter);
+          chip.classList.toggle("active", isActive);
+          chip.setAttribute("aria-pressed", String(isActive));
+        });
+      }
     }
   }
 
@@ -1972,6 +2488,8 @@
     renderMarkers(allProperties);
     updateMarkerVisibility(getFilteredProperties());
     renderMarketStat();
+    updateCompareBar();
+    if (!document.getElementById("compareModal").hidden) renderCompareModal();
   }
 
   const settingsToggle = document.getElementById("settingsToggle");
@@ -1992,10 +2510,12 @@
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !settingsPanel.hidden) {
+    if (e.key !== "Escape") return;
+    if (!settingsPanel.hidden) {
       settingsPanel.hidden = true;
       settingsToggle.setAttribute("aria-expanded", "false");
     }
+    if (!document.getElementById("compareModal").hidden) closeCompareModal();
   });
 
   document.querySelectorAll(".settings-option[data-theme-choice]").forEach((btn) => {
@@ -2003,6 +2523,17 @@
   });
   document.querySelectorAll(".settings-option[data-lang-choice]").forEach((btn) => {
     btn.addEventListener("click", () => setLocale(btn.dataset.langChoice));
+  });
+
+  ["calcDownPct", "calcRate", "calcYears"].forEach((id) => {
+    document.getElementById(id).addEventListener("input", updateCalcLines);
+  });
+
+  document.getElementById("compareOpenBtn").addEventListener("click", openCompareModal);
+  document.getElementById("compareClearBtn").addEventListener("click", clearCompare);
+  document.getElementById("compareCloseBtn").addEventListener("click", closeCompareModal);
+  document.getElementById("compareModal").addEventListener("click", (e) => {
+    if (e.target.id === "compareModal") closeCompareModal();
   });
 
   // Mobile-only: filters start collapsed so the map/list are visible
@@ -2029,6 +2560,7 @@
   // linked id in it right below.
   // ------------------------------------------------------------
   async function boot() {
+    applyFiltersFromUrl();
     await applyDeepLinkFromUrl();
     await loadPropertiesInView();
     map.on("moveend", loadPropertiesInView);
