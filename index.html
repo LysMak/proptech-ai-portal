@@ -251,6 +251,19 @@
     .live-dot { animation: none; }
   }
 
+  .live-clock {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-text-dim);
+    font-variant-numeric: tabular-nums;
+    vertical-align: middle;
+  }
+
+  .footer-date {
+    color: var(--color-text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
   .brand p {
     margin: 2px 0 0;
     font-size: 0.82rem;
@@ -573,9 +586,14 @@
   .resize-handle {
     position: relative;
     width: 6px;
-    background: var(--color-border);
+    /* Same gradient as the header/footer hairlines and the
+       scrollbars, just dimmed at rest so it doesn't read as a bright
+       stripe down the middle of the page until you actually reach
+       for it. */
+    background: linear-gradient(180deg, var(--color-primary), var(--color-accent));
+    opacity: 0.35;
     cursor: col-resize;
-    transition: background 0.15s ease;
+    transition: opacity 0.15s ease;
   }
   .resize-handle::after {
     content: "";
@@ -587,7 +605,7 @@
   }
   .resize-handle:hover,
   .resize-handle.dragging {
-    background: var(--color-primary);
+    opacity: 1;
   }
   .resize-handle:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -1297,7 +1315,7 @@
 <header class="app-header">
   <div class="brand">
     <div>
-      <h1>PropTech AI Analytics <span class="tag">Praha</span> <span class="live-badge" title="Data fetched live from Supabase on every map move"><span class="live-dot"></span>live</span></h1>
+      <h1>PropTech AI Analytics <span class="tag">Praha</span> <span class="live-badge" title="Data fetched live from Supabase on every map move"><span class="live-dot"></span>live</span> <span class="live-clock" id="liveClock" title="Aktuální čas v Praze"></span></h1>
       <p data-i18n="subtitle">Real-time market intelligence for Prague residential listings</p>
     </div>
   </div>
@@ -1452,6 +1470,7 @@
 
 <footer class="app-footer">
   <span data-i18n="footer">PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes</span>
+  <span class="footer-date" id="footerDate" title="Aktuální datum v Praze"></span>
   <a href="https://github.com/LysMak/proptech-ai-portal" target="_blank" rel="noopener" class="footer-link">🔗 GitHub</a>
 </footer>
 
@@ -1779,6 +1798,33 @@
   // ------------------------------------------------------------
   function formatCzk(number) {
     return new Intl.NumberFormat(currentLocale === "en" ? "en-US" : "cs-CZ", { maximumFractionDigits: 0 }).format(number) + " " + t("currency");
+  }
+
+  // Live clock + footer date, both pinned to Europe/Prague regardless
+  // of the visitor's own timezone — this is a Prague-specific portal,
+  // so "now" means Prague time, not wherever the browser happens to be.
+  function updateLiveClock() {
+    const el = document.getElementById("liveClock");
+    if (!el) return;
+    el.textContent = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Prague",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date());
+  }
+
+  function updateFooterDate() {
+    const el = document.getElementById("footerDate");
+    if (!el) return;
+    const formatted = new Intl.DateTimeFormat(currentLocale === "en" ? "en-US" : "cs-CZ", {
+      timeZone: "Europe/Prague",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+    el.textContent = `📅 ${formatted}`;
   }
 
   // dealClass, dealRatingLabel, formatPriceShort, jsonStatValue,
@@ -2605,6 +2651,7 @@
     renderMarketStat();
     updateCompareBar();
     if (!document.getElementById("compareModal").hidden) renderCompareModal();
+    updateFooterDate();
   }
 
   const settingsToggle = document.getElementById("settingsToggle");
@@ -2757,6 +2804,10 @@
   });
 
   applyTranslations();
+
+  updateLiveClock();
+  setInterval(updateLiveClock, 1000);
+  updateFooterDate();
 
   // ------------------------------------------------------------
   // Boot
