@@ -1044,6 +1044,7 @@
 
   /* ---------- Footer ---------- */
   footer.app-footer {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1055,6 +1056,19 @@
     padding: 10px;
     background: var(--color-panel-alt);
     border-top: 1px solid var(--color-border);
+  }
+
+  /* Mirrors the gradient hairline along the header's top edge, at the
+     very bottom of the page — the same brand touch bookending both
+     ends instead of only appearing once at the top. */
+  footer.app-footer::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
   }
 
   .footer-link {
