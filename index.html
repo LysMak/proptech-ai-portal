@@ -556,7 +556,7 @@
   /* ---------- Layout ---------- */
   main.layout {
     display: grid;
-    grid-template-columns: 1.3fr 1fr;
+    grid-template-columns: 1.3fr 6px 1fr;
     flex: 1 1 auto;
     min-height: 0; /* let the grid children size within the remaining flex space instead of overflowing it */
   }
@@ -565,6 +565,33 @@
     height: 100%;
     width: 100%;
     background: var(--color-panel-alt);
+  }
+
+  /* Drag to resize the map/list split. A thin visible strip with a
+     much wider invisible hit area (::after) so it's actually easy to
+     grab, not a 6px hairline to hunt for with the cursor. */
+  .resize-handle {
+    position: relative;
+    width: 6px;
+    background: var(--color-border);
+    cursor: col-resize;
+    transition: background 0.15s ease;
+  }
+  .resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -6px;
+    right: -6px;
+  }
+  .resize-handle:hover,
+  .resize-handle.dragging {
+    background: var(--color-primary);
+  }
+  .resize-handle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 
   .list-panel {
@@ -1157,6 +1184,9 @@
       grid-template-columns: 1fr;
       grid-template-rows: minmax(200px, 1fr) minmax(240px, 1.3fr);
     }
+    /* Map/list are stacked (rows), not side-by-side, on phones — a
+       horizontal drag-to-resize handle doesn't apply here. */
+    .resize-handle { display: none; }
     #map { height: 100%; }
     .list-panel {
       border-left: none;
@@ -1377,8 +1407,9 @@
   <a href="https://csu.gov.cz/produkty/ceny_bytu" target="_blank" rel="noopener" class="market-stat-source" data-i18n="marketStatSource">zdroj: ČSÚ</a>
 </div>
 
-<main class="layout">
+<main class="layout" id="mainLayout">
   <div id="map"></div>
+  <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="vertical" aria-label="Změnit šířku mapy a seznamu" tabindex="0"></div>
   <div class="list-panel">
     <div class="result-count" id="resultCount"></div>
     <div id="cardsContainer">
@@ -2628,6 +2659,101 @@
     const expanded = filtersWrap.classList.toggle("expanded");
     filtersToggle.classList.toggle("expanded", expanded);
     filtersToggle.setAttribute("aria-expanded", String(expanded));
+  });
+
+  // ------------------------------------------------------------
+  // Drag-to-resize the map/list split (desktop only — the handle is
+  // display:none on the mobile stacked layout). Percentages, not
+  // pixels, so it keeps working correctly if the window is resized
+  // after a drag. Persisted so the chosen split survives a reload.
+  // ------------------------------------------------------------
+  const mainLayout = document.getElementById("mainLayout");
+  const resizeHandle = document.getElementById("resizeHandle");
+  const MIN_PANE_PCT = 25; // neither side can be squeezed thinner than this
+
+  function setSplit(leftPct) {
+    const clamped = Math.min(100 - MIN_PANE_PCT, Math.max(MIN_PANE_PCT, leftPct));
+    mainLayout.style.gridTemplateColumns = `${clamped}% 6px ${100 - clamped}%`;
+    return clamped;
+  }
+
+  let savedSplit = null;
+  try {
+    const stored = Number(localStorage.getItem("proptech_split_pct"));
+    if (Number.isFinite(stored) && stored > 0) savedSplit = stored;
+  } catch (e) {
+    /* ignore — falls back to the default 1.3fr/1fr CSS split */
+  }
+  if (savedSplit !== null) setSplit(savedSplit);
+
+  let dragRafId = null;
+  function startResize(clientX) {
+    const rect = mainLayout.getBoundingClientRect();
+    resizeHandle.classList.add("dragging");
+    let lastPct = savedSplit !== null ? savedSplit : 56.5; // matches the default 1.3fr/1fr CSS split
+
+    function onMove(x) {
+      if (dragRafId !== null) return; // throttle to one update per frame
+      dragRafId = requestAnimationFrame(() => {
+        lastPct = setSplit(((x - rect.left) / rect.width) * 100);
+        map.invalidateSize();
+        dragRafId = null;
+      });
+    }
+
+    function onMouseMove(e) {
+      onMove(e.clientX);
+    }
+    function onTouchMove(e) {
+      onMove(e.touches[0].clientX);
+      e.preventDefault(); // stop the page from scrolling while dragging
+    }
+    function stop() {
+      resizeHandle.classList.remove("dragging");
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", stop);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", stop);
+      savedSplit = lastPct;
+      try {
+        localStorage.setItem("proptech_split_pct", String(lastPct));
+      } catch (e2) {
+        /* ignore — the split just won't persist across reloads */
+      }
+      map.invalidateSize();
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", stop);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", stop);
+  }
+
+  resizeHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    startResize(e.clientX);
+  });
+  resizeHandle.addEventListener(
+    "touchstart",
+    (e) => {
+      startResize(e.touches[0].clientX);
+    },
+    { passive: true }
+  );
+
+  // Keyboard: arrow keys nudge the split by 2% at a time, for anyone
+  // who can't (or doesn't want to) drag with a mouse.
+  resizeHandle.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const current = savedSplit !== null ? savedSplit : 56.5;
+    savedSplit = setSplit(current + (e.key === "ArrowRight" ? 2 : -2));
+    try {
+      localStorage.setItem("proptech_split_pct", String(savedSplit));
+    } catch (e2) {
+      /* ignore */
+    }
+    map.invalidateSize();
   });
 
   applyTranslations();
