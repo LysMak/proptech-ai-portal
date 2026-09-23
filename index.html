@@ -148,7 +148,8 @@
   .filters input:focus-visible,
   .filters select:focus-visible,
   .card:focus-visible,
-  .market-stat-source:focus-visible {
+  .market-stat-source:focus-visible,
+  .footer-link:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
@@ -695,6 +696,20 @@
     line-height: 1.2;
   }
 
+  .ai-summary-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ai-summary-source {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--color-text-dim);
+    opacity: 0.75;
+    letter-spacing: 0.02em;
+  }
+
   /* ---------- Leaflet marker ---------- */
   .price-pin {
     display: inline-flex;
@@ -759,8 +774,41 @@
   }
   .leaflet-control-layers-selector { margin-right: 6px; }
 
+  /* ---------- Map legend + scale ---------- */
+  .map-legend {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .map-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.72rem;
+    color: var(--color-text);
+    white-space: nowrap;
+  }
+
+  .leaflet-control-scale-line {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border) !important;
+    color: var(--color-text);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
   /* ---------- Footer ---------- */
   footer.app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 14px;
     text-align: center;
     font-size: 0.75rem;
     color: var(--color-text-dim);
@@ -768,6 +816,14 @@
     background: var(--color-panel-alt);
     border-top: 1px solid var(--color-border);
   }
+
+  .footer-link {
+    color: var(--color-text-dim);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .footer-link:hover { color: var(--color-primary); }
 
   /* ---------- Responsive ---------- */
   .filters-toggle { display: none; }
@@ -990,8 +1046,9 @@
   </div>
 </main>
 
-<footer class="app-footer" data-i18n="footer">
-  PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes
+<footer class="app-footer">
+  <span data-i18n="footer">PropTech Real Estate AI Analytics Portal — demo portfolio project · Data &amp; map for illustrative purposes</span>
+  <a href="https://github.com/LysMak/proptech-ai-portal" target="_blank" rel="noopener" class="footer-link">🔗 GitHub</a>
 </footer>
 
 <script src="config.js"></script>
@@ -1022,9 +1079,9 @@
   const I18N = {
     cs: {
       subtitle: "Průzkum trhu s nemovitostmi v Praze v reálném čase",
-      statListings: "Nabídek",
-      statAvgPrice: "Ø Kč / m²",
-      statGoodDeals: "Pod tržní cenou",
+      statListings: "🏠 Nabídek",
+      statAvgPrice: "💰 Ø Kč / m²",
+      statGoodDeals: "📉 Pod tržní cenou",
       settings: "Nastavení",
       themeLabel: "Motiv",
       themeDark: "Tmavý",
@@ -1051,6 +1108,7 @@
       copyLinkAria: "Kopírovat odkaz na tuto nabídku",
       copyLinkDone: "✓ Zkopírováno",
       copyLinkFallback: "Zkopírujte odkaz na tuto nabídku:",
+      aiSourceLabel: "🧠 Claude 3.5 Sonnet · předgenerováno",
       noResultsFilter: "Žádné nabídky neodpovídají zvoleným filtrům.",
       noResultsViewport: "V aktuálním výřezu mapy nejsou žádné nabídky. Zkuste mapu oddálit nebo posunout.",
       errorLoad: 'Nepodařilo se načíst data ze Supabase.<br>Zkontrolujte SUPABASE_URL a SUPABASE_ANON_KEY v config.js, a že jste spustili aktuální schema.sql.<br><small>{err}</small>',
@@ -1067,9 +1125,9 @@
     },
     en: {
       subtitle: "Real-time market intelligence for Prague residential listings",
-      statListings: "Listings",
-      statAvgPrice: "Avg CZK/m²",
-      statGoodDeals: "Below market",
+      statListings: "🏠 Listings",
+      statAvgPrice: "💰 Avg CZK/m²",
+      statGoodDeals: "📉 Below market",
       settings: "Settings",
       themeLabel: "Theme",
       themeDark: "Dark",
@@ -1096,6 +1154,7 @@
       copyLinkAria: "Copy link to this listing",
       copyLinkDone: "✓ Copied",
       copyLinkFallback: "Copy this link to the listing:",
+      aiSourceLabel: "🧠 Claude 3.5 Sonnet · pre-generated",
       noResultsFilter: "No listings match the selected filters.",
       noResultsViewport: "No listings in the current map view. Try zooming out or panning the map.",
       errorLoad: 'Failed to load data from Supabase.<br>Check SUPABASE_URL and SUPABASE_ANON_KEY in config.js, and that you have run the latest schema.sql.<br><small>{err}</small>',
@@ -1246,6 +1305,30 @@
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
   }).addTo(map);
+
+  // Distance scale bar — a small, standard cartographic detail that
+  // was simply missing before.
+  L.control.scale({ position: "bottomleft", imperial: false, maxWidth: 120 }).addTo(map);
+
+  // Explains what the marker colors mean, right on the map itself —
+  // previously that was only implied by the filter chips above it.
+  // Reuses the same dot-good/neutral/bad classes as those chips (and
+  // the same belowMarket/marketPrice/aboveMarket i18n keys), so it's
+  // kept in sync automatically by the existing applyTranslations()
+  // sweep over every [data-i18n] element in the document.
+  const MapLegendControl = L.Control.extend({
+    options: { position: "bottomright" },
+    onAdd: function () {
+      const div = L.DomUtil.create("div", "map-legend");
+      div.innerHTML =
+        '<div class="map-legend-item"><span class="deal-chip-dot dot-good"></span><span data-i18n="belowMarket"></span></div>' +
+        '<div class="map-legend-item"><span class="deal-chip-dot dot-neutral"></span><span data-i18n="marketPrice"></span></div>' +
+        '<div class="map-legend-item"><span class="deal-chip-dot dot-bad"></span><span data-i18n="aboveMarket"></span></div>';
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    },
+  });
+  new MapLegendControl().addTo(map);
 
   // ------------------------------------------------------------
   // Helpers
@@ -1599,13 +1682,16 @@
             </div>
             <div class="card-price-row">
               <span class="card-price">${formatCzk(p.price)}</span>
-              <span class="card-meta">${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
+              <span class="card-meta">📐 ${p.area_sqm} m² · ${formatCzk(p.price_per_sqm)}/m²</span>
             </div>
             ${renderHistoryBlock(p.id)}
             <span class="deal-badge ${cls}">${escapeHtml(dealRatingDisplay(p.deal_rating))}</span>
             <div class="ai-summary">
               <span class="ai-icon">🤖</span>
-              <span>${escapeHtml(summary)}</span>
+              <div class="ai-summary-body">
+                <span>${escapeHtml(summary)}</span>
+                <span class="ai-summary-source">${escapeHtml(t("aiSourceLabel"))}</span>
+              </div>
             </div>
           </article>
         `;
